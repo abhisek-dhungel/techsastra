@@ -32,10 +32,27 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
-# vercel
-.vercel
+# database
+/prisma/*.db
+/prisma/*.db-journal
+
+# uploaded media
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# cpanel build artifacts (not for GitHub/Vercel)
+/deploy-bundle/
+*.tar.gz
+
+# local editor / agent tooling
+.claude/
+.windsurf/
+.agents/

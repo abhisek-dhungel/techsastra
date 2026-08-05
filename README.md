@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TechSastra
 
-## Getting Started
+Nepal-focused tech news site modeled on [techsastra.com](https://techsastra.com) — responsive UI plus a backend for publishing posts under categories and subcategories.
 
-First, run the development server:
+## Categories
+
+- **NEWS**
+- **GADGETS** → Mobile Phones, Laptops, Cameras, Accessories, TV
+- **AUTO** → Bikes, Cars, Scooters
+- **PRICES** → Mobile Phone, Laptops, Camera, TV
+- **REVIEWS**
+- **EVENTS/STARTUPS**
+- **DEALS**
+- **BLOGS**
+
+## Quick start
 
 ```bash
+npm install
+npm run db:setup
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) for the site and [http://localhost:3000/admin/login](http://localhost:3000/admin/login) for the CMS.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Default admin login (change in `.env`):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Username: `admin`
+- Password: `techsastra2026`
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start Next.js dev server |
+| `npm run db:setup` | Create schema (`prisma db push`) + seed sample posts |
+| `npm run db:seed` | Re-seed sample content |
+| `npm run backfill:images` | Migrate existing `public/uploads` images to Cloudinary and rewrite Post rows |
+| `npm run build` | Production build |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- Prisma + **MySQL** for posts, categories, and authors
+- Cloudinary for image storage (cover + inline uploads)
+- Admin CMS at `/admin` with REST APIs under `/api/posts` and `/api/categories`
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the step-by-step Vercel + Railway MySQL + Cloudinary guide.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

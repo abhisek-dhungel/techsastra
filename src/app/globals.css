@@ -67,6 +67,7 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-wrap: break-word;
 }
 
 body::before {
@@ -660,11 +661,6 @@ img {
   gap: 1rem;
 }
 
-.section-slider-fixed {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-
 .section-slider-row2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -735,10 +731,6 @@ img {
 }
 
 @media (max-width: 560px) {
-  .section-slider-fixed {
-    grid-template-columns: 1fr;
-  }
-
   .section-slider-track-one .section-slider-card {
     flex: 0 0 100%;
     width: 100%;
@@ -1183,6 +1175,12 @@ img {
     display: block;
   }
 
+  /* Hide social icons in the mobile navigation bar only.
+     Desktop keeps them (see .header-bar-row .social-chip below). */
+  .header-bar-row .social-chip {
+    display: none;
+  }
+
   .home-grid {
     grid-template-columns: 1fr !important;
   }
@@ -1200,16 +1198,27 @@ img {
   }
 }
 
+@media (min-width: 901px) {
+  .header-bar-row .social-chip {
+    display: inline-flex;
+  }
+}
+
 @media (max-width: 560px) {
   .gadgets-grid,
-  .latest-grid,
-  .auto-grid {
+  .latest-grid {
     grid-template-columns: 1fr !important;
   }
 
   .nav-link {
     padding: 0.75rem 0.5rem;
   }
+}
+
+/* Prevent any grid child from blowing out of its track (avoids horizontal
+   overflow / cut-off cards across every layout). */
+[class*="grid"] > * {
+  min-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

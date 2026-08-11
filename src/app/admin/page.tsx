@@ -40,12 +40,47 @@ type Post = {
   publishedAt: string;
 };
 
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(code ? `${message} (${code})` : message);
+    this.name = "ApiError";
+  }
+}
+
+async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const res = await fetch(input, init);
+  const data = (await res.json().catch(() => null)) as
+    | { error?: string; code?: string }
+    | T
+    | null;
+
+  if (!res.ok) {
+    const errorBody = data as { error?: string; code?: string } | null;
+    throw new ApiError(
+      errorBody?.error || `Request failed with status ${res.status}.`,
+      res.status,
+      errorBody?.code,
+    );
+  }
+
+  if (data === null) {
+    throw new ApiError("The server returned an empty response.", res.status);
+  }
+
+  return data as T;
+}
+
 async function uploadImage(file: File) {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch("/api/upload", { method: "POST", body });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Upload failed");
+  const data = await apiJson<{ url: string }>("/api/upload", {
+    method: "POST",
+    body,
+  });
   return data.url as string;
 }
 
@@ -108,32 +143,40 @@ export default function AdminPage() {
 
   async function load() {
     setLoading(true);
-    const [meRes, catsRes, postsRes] = await Promise.all([
-      fetch("/api/auth/me"),
-      fetch("/api/categories"),
-      fetch("/api/posts"),
-    ]);
+    try {
+      const [me, cats, loadedPosts] = await Promise.all([
+        apiJson<{ username?: string }>("/api/auth/me"),
+        apiJson<Category[]>("/api/categories"),
+        apiJson<Post[]>("/api/posts"),
+      ]);
 
-    if (meRes.status === 401 || catsRes.status === 401 || postsRes.status === 401) {
-      router.replace("/admin/login");
-      return;
+      setUsername(me.username ?? null);
+      setCategories(cats);
+      setPosts(loadedPosts);
+      const firstParent = cats.find((c) => !c.parentId);
+      if (!editingId && !form.parentCategoryId && firstParent) {
+        setForm((f) => ({
+          ...f,
+          parentCategoryId: firstParent.id,
+          subcategoryId: "",
+        }));
+      }
+      if (cats.length === 0) {
+        setError(
+          "No categories exist in the database. Seed only a new empty database, or restore your category data.",
+        );
+      }
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+      setError(
+        reason instanceof Error ? reason.message : "Failed to load the admin data.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const me = await meRes.json();
-    const cats = await catsRes.json();
-    const p = await postsRes.json();
-    setUsername(me.username ?? null);
-    setCategories(cats);
-    setPosts(p);
-    const firstParent = (cats as Category[]).find((c) => !c.parentId);
-    if (!editingId && !form.parentCategoryId && firstParent) {
-      setForm((f) => ({
-        ...f,
-        parentCategoryId: firstParent.id,
-        subcategoryId: "",
-      }));
-    }
-    setLoading(false);
   }
 
   function resetForm(keepParent = true) {
@@ -184,12 +227,19 @@ export default function AdminPage() {
 
   async function logout() {
     setLoggingOut(true);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/admin/login");
-    router.refresh();
+    try {
+      await apiJson<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+      router.replace("/admin/login");
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Logout failed.");
+      setLoggingOut(false);
+    }
   }
 
   useEffect(() => {
+    // Initial client-side synchronization with the authenticated CMS APIs.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -286,7 +336,7 @@ export default function AdminPage() {
         secondaryCategoryId: selectedSecondaryId || null,
       };
 
-      const res = await fetch(
+      const data = await apiJson<Post>(
         editingId ? `/api/posts/${editingId}` : "/api/posts",
         {
           method: editingId ? "PATCH" : "POST",
@@ -294,8 +344,6 @@ export default function AdminPage() {
           body: JSON.stringify(payload),
         },
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save");
       setMessage(editingId ? `Updated: ${data.title}` : `Published: ${data.title}`);
       resetForm();
       await load();
@@ -308,8 +356,13 @@ export default function AdminPage() {
 
   async function removePost(id: string) {
     if (!confirm("Delete this post?")) return;
-    await fetch(`/api/posts/${id}`, { method: "DELETE" });
-    await load();
+    setError(null);
+    try {
+      await apiJson<{ ok: boolean }>(`/api/posts/${id}`, { method: "DELETE" });
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Delete failed.");
+    }
   }
 
   return (

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/auth";
-import { uploadBuffer } from "@/lib/cloudinary";
+import {
+  CloudinaryConfigurationError,
+  uploadBuffer,
+} from "@/lib/cloudinary";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -46,6 +49,21 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Upload failed." }, { status: 500 });
+    if (err instanceof CloudinaryConfigurationError) {
+      return NextResponse.json(
+        {
+          error: `Image storage is not configured. Add ${err.missingVariables.join(", ")} in Vercel and redeploy.`,
+          code: "CLOUDINARY_NOT_CONFIGURED",
+        },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      {
+        error: "Cloudinary rejected the upload. Check the Vercel runtime log.",
+        code: "CLOUDINARY_UPLOAD_FAILED",
+      },
+      { status: 502 },
+    );
   }
 }

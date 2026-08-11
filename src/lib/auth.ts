@@ -4,13 +4,25 @@ export const SESSION_COOKIE = "ts_admin_session";
 const SESSION_DAYS = 7;
 
 function getSecret() {
-  return process.env.AUTH_SECRET || "techsastra-dev-secret-change-me";
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET is missing from the production environment.");
+  }
+  return "techsastra-dev-secret-change-me";
 }
 
 function getAdminCredentials() {
+  const username = process.env.ADMIN_USERNAME?.trim();
+  const password = process.env.ADMIN_PASSWORD;
+  if (process.env.NODE_ENV === "production" && (!username || !password)) {
+    throw new Error(
+      "ADMIN_USERNAME and ADMIN_PASSWORD are required in production.",
+    );
+  }
   return {
-    username: process.env.ADMIN_USERNAME || "admin",
-    password: process.env.ADMIN_PASSWORD || "techsastra2026",
+    username: username || "admin",
+    password: password || "techsastra2026",
   };
 }
 

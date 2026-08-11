@@ -35,8 +35,14 @@ Default admin login (change in `.env`):
 | `npm run dev` | Start Next.js dev server |
 | `npm run db:setup` | Create schema (`prisma db push`) + seed sample posts |
 | `npm run db:seed` | Re-seed sample content |
+| `npm run db:deploy` | Apply tracked production migrations; safely baseline an older `db push` database once |
 | `npm run backfill:images` | Migrate existing `public/uploads` images to Cloudinary and rewrite Post rows |
-| `npm run build` | Production build |
+| `npm run build` | Production build, including database migration deployment |
+| `npm run build:app` | Build the app without changing a database (useful for local code checks) |
+
+> **Production warning:** `db:seed` and `db:setup` delete all existing posts,
+> categories, and authors before loading sample content. Never run them against a
+> populated production database.
 
 ## Stack
 
@@ -48,4 +54,3 @@ Default admin login (change in `.env`):
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the step-by-step Vercel + Railway MySQL + Cloudinary guide.
-

@@ -29,7 +29,17 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true, username });
     response.cookies.set(sessionCookieOptions(token));
     return response;
-  } catch {
-    return NextResponse.json({ error: "Login failed." }, { status: 500 });
+  } catch (reason) {
+    console.error(
+      `[auth] Login failed: ${reason instanceof Error ? reason.message : String(reason)}`,
+    );
+    return NextResponse.json(
+      {
+        error:
+          "Login is not configured correctly. Check the Vercel authentication variables.",
+        code: "AUTH_CONFIGURATION_FAILED",
+      },
+      { status: 503 },
+    );
   }
 }

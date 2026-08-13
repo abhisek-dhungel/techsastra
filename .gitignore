@@ -37,6 +37,8 @@ yarn-error.log*
 # database
 /prisma/*.db
 /prisma/*.db-journal
+/prisma/*.db-shm
+/prisma/*.db-wal
 
 # uploaded media
 /public/uploads/*
@@ -45,8 +47,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-/src/generated/prisma
 
 # cpanel build artifacts (not for GitHub/Vercel)
 /deploy-bundle/

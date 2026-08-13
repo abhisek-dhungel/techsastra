@@ -1,47 +1,21 @@
 import { unstable_cache } from "next/cache";
-import { prisma } from "./prisma";
-import { Prisma } from "@prisma/client";
+import {
+  findCategoryBySlug,
+  findPostBySlug,
+  listChildCategories,
+  listFeedPostRecords,
+  listFlatCategories,
+  listLatestPostCards,
+  listPostCardsByCategoryIds,
+  listRootCategoriesWithChildren,
+  type PostCardRecord,
+  type PostWithRelations,
+} from "./database";
 
-export type PostWithRelations = Prisma.PostGetPayload<{
-  include: {
-    category: { include: { parent: true } };
-    secondaryCategory: { include: { parent: true } };
-    author: true;
-  };
-}>;
+export type { PostWithRelations };
 
 /** Lean shape for homepage / category cards — no content or parent trees */
-export type PostCardData = {
-  id: string;
-  title: string;
-  slug: string;
-  coverImage: string | null;
-  excerpt?: string | null;
-  publishedAt?: Date;
-  createdAt?: Date;
-  category: { name: string; slug: string };
-  secondaryCategory: { name: string; slug: string } | null;
-  author: { name: string };
-};
-
-const postInclude = {
-  category: { include: { parent: true } },
-  secondaryCategory: { include: { parent: true } },
-  author: true,
-} satisfies Prisma.PostInclude;
-
-const cardSelect = {
-  id: true,
-  title: true,
-  slug: true,
-  coverImage: true,
-  excerpt: true,
-  publishedAt: true,
-  createdAt: true,
-  category: { select: { name: true, slug: true } },
-  secondaryCategory: { select: { name: true, slug: true } },
-  author: { select: { name: true } },
-} satisfies Prisma.PostSelect;
+export type PostCardData = PostCardRecord;
 
 export function categoryLabel(post: {
   category: { name: string };
@@ -51,12 +25,7 @@ export function categoryLabel(post: {
 
 async function latestPosts(take: number) {
   try {
-    return await prisma.post.findMany({
-      where: { published: true },
-      select: cardSelect,
-      orderBy: { publishedAt: "desc" },
-      take,
-    });
+    return await listLatestPostCards(take);
   } catch (err) {
     console.warn("[posts] getLatestPosts skipped:", (err as Error).message);
     return [];
@@ -65,12 +34,7 @@ async function latestPosts(take: number) {
 
 async function featuredPosts(take: number) {
   try {
-    return await prisma.post.findMany({
-      where: { published: true, featured: true },
-      select: cardSelect,
-      orderBy: { publishedAt: "desc" },
-      take,
-    });
+    return await listLatestPostCards(take, { featuredOnly: true });
   } catch (err) {
     console.warn("[posts] getFeaturedPosts skipped:", (err as Error).message);
     return [];
@@ -79,28 +43,12 @@ async function featuredPosts(take: number) {
 
 async function postsByCategorySlug(slug: string, take: number) {
   try {
-    const category = await prisma.category.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        parentId: true,
-        children: { select: { id: true } },
-      },
-    });
+    const category = await findCategoryBySlug(slug);
     if (!category) return { category: null, posts: [] as PostCardData[] };
 
-    const ids = [category.id, ...category.children.map((c) => c.id)];
-    const posts = await prisma.post.findMany({
-      where: {
-        published: true,
-        OR: [{ categoryId: { in: ids } }, { secondaryCategoryId: { in: ids } }],
-      },
-      select: cardSelect,
-      orderBy: { publishedAt: "desc" },
-      take,
-    });
+    const children = await listChildCategories(category.id);
+    const ids = [category.id, ...children.map((child) => child.id)];
+    const posts = await listPostCardsByCategoryIds(ids, take);
     return { category, posts };
   } catch (err) {
     console.warn("[posts] getPostsByCategorySlug skipped:", (err as Error).message);
@@ -128,15 +76,7 @@ export const getPostsByCategorySlug = unstable_cache(
 
 async function feedPosts(take: number) {
   try {
-    return await prisma.post.findMany({
-      where: { published: true },
-      select: {
-        ...cardSelect,
-        content: true,
-      },
-      orderBy: { publishedAt: "desc" },
-      take,
-    });
+    return await listFeedPostRecords(take);
   } catch (err) {
     console.warn("[posts] getFeedPosts skipped:", (err as Error).message);
     return [];
@@ -150,10 +90,7 @@ export const getFeedPosts = unstable_cache(feedPosts, ["feed-posts"], {
 
 export async function getPostBySlug(slug: string) {
   try {
-    return await prisma.post.findUnique({
-      where: { slug },
-      include: postInclude,
-    });
+    return await findPostBySlug(slug);
   } catch (err) {
     console.warn("[posts] getPostBySlug skipped:", (err as Error).message);
     return null;
@@ -162,11 +99,7 @@ export async function getPostBySlug(slug: string) {
 
 export async function getAllCategories() {
   try {
-    return await prisma.category.findMany({
-      where: { parentId: null },
-      include: { children: { orderBy: { order: "asc" } } },
-      orderBy: { order: "asc" },
-    });
+    return await listRootCategoriesWithChildren();
   } catch (err) {
     console.warn("[posts] getAllCategories skipped:", (err as Error).message);
     return [];
@@ -175,10 +108,7 @@ export async function getAllCategories() {
 
 export async function getFlatCategories() {
   try {
-    return await prisma.category.findMany({
-      include: { parent: true },
-      orderBy: [{ parentId: "asc" }, { order: "asc" }],
-    });
+    return await listFlatCategories();
   } catch (err) {
     console.warn("[posts] getFlatCategories skipped:", (err as Error).message);
     return [];

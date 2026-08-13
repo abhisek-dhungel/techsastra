@@ -1,11 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { createClient } from "@libsql/client";
 
-const INITIAL_MIGRATION = "20260810000000_init";
-
-// Vercel injects variables directly. For local deployment checks, mirror Prisma's
-// normal behavior by loading the gitignored root .env when Node supports it.
-if (!process.env.DATABASE_URL && typeof process.loadEnvFile === "function") {
+if (!process.env.TURSO_DATABASE_URL && typeof process.loadEnvFile === "function") {
   try {
     process.loadEnvFile(".env");
   } catch {
@@ -13,42 +10,43 @@ if (!process.env.DATABASE_URL && typeof process.loadEnvFile === "function") {
   }
 }
 
-const rawDatabaseUrl = process.env.DATABASE_URL?.trim();
-
 function fail(message) {
   console.error(`[database] ${message}`);
   process.exit(1);
 }
 
-if (!rawDatabaseUrl) {
+const databaseUrl =
+  process.env.TURSO_DATABASE_URL?.trim() ||
+  (!process.env.VERCEL ? "file:prisma/dev.db" : "");
+const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+
+if (!databaseUrl) {
   fail(
-    "DATABASE_URL is missing. Add Railway's public MySQL URL to the Vercel Production environment.",
+    "TURSO_DATABASE_URL is missing. Connect a Turso database to the Vercel project.",
   );
 }
 
-let databaseUrl;
-try {
-  databaseUrl = new URL(rawDatabaseUrl);
-} catch {
-  fail("DATABASE_URL is not a valid URL.");
+const localFile = databaseUrl.startsWith("file:");
+if (process.env.VERCEL && localFile) {
+  fail(
+    "TURSO_DATABASE_URL cannot use a local file on Vercel. Connect a Turso Cloud database.",
+  );
 }
-
-if (databaseUrl.protocol !== "mysql:") {
-  fail("DATABASE_URL must start with mysql:// for this project.");
+if (!localFile && !authToken) {
+  fail(
+    "TURSO_AUTH_TOKEN is missing. Reconnect the Turso integration or add the token in Vercel.",
+  );
 }
 
 if (
-  process.env.VERCEL &&
-  (databaseUrl.hostname === "railway.internal" ||
-    databaseUrl.hostname.endsWith(".railway.internal"))
+  !localFile &&
+  !databaseUrl.startsWith("libsql:") &&
+  !databaseUrl.startsWith("https:") &&
+  !databaseUrl.startsWith("http:") &&
+  !databaseUrl.startsWith("wss:") &&
+  !databaseUrl.startsWith("ws:")
 ) {
-  fail(
-    "DATABASE_URL uses a private Railway hostname. Vercel requires the public TCP proxy URL (*.proxy.rlwy.net).",
-  );
-}
-
-if (!databaseUrl.username || !databaseUrl.hostname || !databaseUrl.pathname.slice(1)) {
-  fail("DATABASE_URL must include a username, host, and database name.");
+  fail("TURSO_DATABASE_URL must start with libsql://, https://, or file:.");
 }
 
 if (process.env.VERCEL) {
@@ -70,98 +68,55 @@ if (process.env.VERCEL) {
   }
 }
 
-const prismaExecutable = path.join(
-  process.cwd(),
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "prisma.cmd" : "prisma",
-);
+const client = createClient({
+  url: databaseUrl,
+  authToken,
+  intMode: "number",
+  timeout: 5_000,
+});
 
-function redact(output) {
-  return String(output || "")
-    .split(rawDatabaseUrl)
-    .join("[REDACTED_DATABASE_URL]")
-    .replace(/mysql:\/\/[^\s@]+@/gi, "mysql://[REDACTED]@");
-}
+const migrationsDirectory = path.join(process.cwd(), "db", "migrations");
 
-function printResult(result) {
-  const stdout = redact(result.stdout);
-  const stderr = redact(result.stderr);
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-}
+try {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS "_techsastra_migrations" (
+      "name" TEXT NOT NULL PRIMARY KEY,
+      "appliedAt" INTEGER NOT NULL
+    )
+  `);
 
-function runPrisma(args, { capture = false } = {}) {
-  const result = spawnSync(prismaExecutable, args, {
-    cwd: process.cwd(),
-    env: process.env,
-    encoding: "utf8",
-    stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
-  });
-
-  if (result.error) {
-    fail(`Could not start Prisma CLI: ${result.error.message}`);
-  }
-
-  return result;
-}
-
-const port = databaseUrl.port || "3306";
-const databaseName = databaseUrl.pathname.slice(1);
-console.log(
-  `[database] Deploying migrations to ${databaseUrl.hostname}:${port}/${databaseName}`,
-);
-
-let deployResult = runPrisma(["migrate", "deploy"], { capture: true });
-
-if (deployResult.status === 0) {
-  printResult(deployResult);
-  console.log("[database] Migrations are up to date.");
-  process.exit(0);
-}
-
-const deployOutput = `${deployResult.stdout || ""}\n${deployResult.stderr || ""}`;
-const needsBaseline =
-  deployOutput.includes("P3005") ||
-  deployOutput.toLowerCase().includes("database schema is not empty");
-
-if (!needsBaseline) {
-  printResult(deployResult);
-  fail("Prisma migration deployment failed.");
-}
-
-console.log(
-  "[database] Existing tables detected without migration history; validating the schema before creating a one-time baseline.",
-);
-
-const pushResult = runPrisma(["db", "push", "--skip-generate"]);
-if (pushResult.status !== 0) {
-  fail(
-    "The existing database could not be aligned safely. No data-loss override was used.",
+  const appliedResult = await client.execute(
+    `SELECT "name" FROM "_techsastra_migrations"`,
   );
-}
+  const applied = new Set(appliedResult.rows.map((row) => String(row.name)));
+  const migrationFiles = (await readdir(migrationsDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
 
-const resolveResult = runPrisma(
-  ["migrate", "resolve", "--applied", INITIAL_MIGRATION],
-  { capture: true },
-);
-if (resolveResult.status !== 0) {
-  const resolveOutput = `${resolveResult.stdout || ""}\n${resolveResult.stderr || ""}`;
-  const alreadyApplied =
-    resolveOutput.includes("P3008") ||
-    resolveOutput.toLowerCase().includes("already recorded as applied");
-  if (!alreadyApplied) {
-    printResult(resolveResult);
-    fail("The existing database was aligned, but its migration baseline failed.");
+  let appliedCount = 0;
+  for (const name of migrationFiles) {
+    if (applied.has(name)) continue;
+    console.log(`[database] Applying ${name}`);
+    const sql = await readFile(path.join(migrationsDirectory, name), "utf8");
+    await client.executeMultiple(sql);
+    await client.execute({
+      sql: `
+        INSERT OR IGNORE INTO "_techsastra_migrations" ("name", "appliedAt")
+        VALUES (?, ?)
+      `,
+      args: [name, Date.now()],
+    });
+    appliedCount += 1;
   }
-  console.log("[database] Another deployment already created the baseline.");
-} else {
-  printResult(resolveResult);
-}
 
-deployResult = runPrisma(["migrate", "deploy"]);
-if (deployResult.status !== 0) {
-  fail("Migration deployment failed after creating the baseline.");
+  if (appliedCount === 0) {
+    console.log("[database] Turso schema is up to date.");
+  } else {
+    console.log(`[database] Applied ${appliedCount} migration(s).`);
+  }
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  fail(`Turso migration failed: ${message.replace(/eyJ[A-Za-z0-9._-]+/g, "[REDACTED_TOKEN]")}`);
+} finally {
+  client.close();
 }
-
-console.log("[database] Existing database baselined and migrations are up to date.");

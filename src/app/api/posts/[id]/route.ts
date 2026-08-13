@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import slugify from "slugify";
-import { Prisma } from "@prisma/client";
 import { requireApiSession } from "@/lib/auth";
 import { logDatabaseError } from "@/lib/database-errors";
-import { prisma } from "@/lib/prisma";
+import {
+  countExistingCategories,
+  deletePost,
+  updatePost,
+} from "@/lib/database";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -14,16 +17,13 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
   try {
-    await prisma.post.delete({ where: { id } });
+    const deleted = await deletePost(id);
+    if (!deleted) {
+      return NextResponse.json({ error: "Post not found." }, { status: 404 });
+    }
     revalidateTag("posts", "max");
     return NextResponse.json({ ok: true });
   } catch (reason) {
-    if (
-      reason instanceof Prisma.PrismaClientKnownRequestError &&
-      reason.code === "P2025"
-    ) {
-      return NextResponse.json({ error: "Post not found." }, { status: 404 });
-    }
     const details = logDatabaseError("delete post", reason);
     return NextResponse.json(
       { error: details.message, code: details.code },
@@ -71,11 +71,10 @@ export async function PATCH(request: Request, { params }: Params) {
       String(body.categoryId),
       ...(body.secondaryCategoryId ? [String(body.secondaryCategoryId)] : []),
     ];
-    const existingCategories = await prisma.category.findMany({
-      where: { id: { in: requestedCategoryIds } },
-      select: { id: true },
-    });
-    if (existingCategories.length !== new Set(requestedCategoryIds).size) {
+    const existingCategoryCount = await countExistingCategories(
+      requestedCategoryIds,
+    );
+    if (existingCategoryCount !== new Set(requestedCategoryIds).size) {
       return NextResponse.json(
         { error: "A selected category no longer exists. Reload and try again." },
         { status: 400 },
@@ -97,36 +96,24 @@ export async function PATCH(request: Request, { params }: Params) {
       );
     }
 
-    const post = await prisma.post.update({
-      where: { id },
-      data: {
-        title,
-        content,
-        excerpt: excerpt || null,
-        coverImage: coverImage || null,
-        category: { connect: { id: String(body.categoryId) } },
-        secondaryCategory: body.secondaryCategoryId
-          ? { connect: { id: String(body.secondaryCategoryId) } }
-          : { disconnect: true },
-        featured: Boolean(body.featured),
-        published: body.published !== false,
-        ...(authorLabel && authorSlug
-          ? {
-              author: {
-                connectOrCreate: {
-                  where: { slug: authorSlug },
-                  create: { name: authorLabel, slug: authorSlug },
-                },
-              },
-            }
-          : {}),
-      },
-      include: {
-        category: { include: { parent: true } },
-        secondaryCategory: { include: { parent: true } },
-        author: true,
-      },
+    const post = await updatePost(id, {
+      title,
+      content,
+      excerpt: excerpt || null,
+      coverImage: coverImage || null,
+      categoryId: String(body.categoryId),
+      secondaryCategoryId: body.secondaryCategoryId
+        ? String(body.secondaryCategoryId)
+        : null,
+      featured: Boolean(body.featured),
+      published: body.published !== false,
+      ...(authorLabel && authorSlug
+        ? { authorName: authorLabel, authorSlug }
+        : {}),
     });
+    if (!post) {
+      return NextResponse.json({ error: "Post not found." }, { status: 404 });
+    }
     revalidateTag("posts", "max");
     return NextResponse.json(post);
   } catch (reason) {

@@ -1,110 +1,143 @@
-# Deployment Guide — Vercel + Railway MySQL + Cloudinary
+# Deployment Guide — Vercel + Turso + Cloudinary
 
-This site has three moving parts. Vercel hosts the Next.js app, Railway hosts the
-MySQL database, and Cloudinary hosts the images.
+Vercel hosts the Next.js application, Turso stores posts and categories in
+serverless SQLite, and Cloudinary stores and delivers images. Railway, MySQL,
+and Prisma are not used.
 
-> **Why Cloudinary?** Uploads used to be written to `public/uploads/` on local disk.
-> Vercel's filesystem is ephemeral — files vanish on every deploy and don't sync
-> across serverless instances. Image storage **must** live in object storage, so the
-> upload route (`src/app/api/upload/route.ts`) now uploads to Cloudinary.
+## 1. Push the project to GitHub
 
----
+Commit and push the latest project changes. Vercel deploys the production branch
+automatically after the repository is connected.
 
-## 1. Database — Railway MySQL
+## 2. Create the Vercel project
 
-1. Create an account at [railway.app](https://railway.app) → **New Project** →
-   **Deploy with a Template** → search **MySQL**.
-2. Wait for provisioning. Open the MySQL service and copy its **external/public**
-   connection URL. It looks like:
-   `mysql://root:USER_PSW@something.proxy.rlwy.net:PORT/railway`.
-3. In **Settings → Networking**, confirm the TCP proxy is enabled so Vercel can
-   reach it. Never give Vercel a `*.railway.internal` URL; that hostname is only
-   reachable by other Railway services.
-4. Enable Railway backups before storing production content.
+1. Sign in at [vercel.com](https://vercel.com).
+2. Select **Add New → Project** and import the GitHub repository.
+3. Keep **Next.js** as the framework preset and the repository root as the root
+   directory.
+4. Do not deploy yet if Vercel offers an opportunity to configure integrations and
+   environment variables first.
 
-## 2. Image storage — Cloudinary
+## 3. Add Turso from the Vercel Marketplace
 
-1. Create a free account at [cloudinary.com](https://cloudinary.com). From the
-   dashboard copy your **Cloud name**, **API Key**, **API Secret**.
-2. The upload route already uses these. No code changes needed.
+1. In the Vercel dashboard, open **Storage → Create Database**.
+2. Choose **Turso Cloud** and select the free plan.
+3. Create a database in a region close to the Vercel Functions region.
+4. Connect the database to this project.
+5. Confirm that Vercel created both variables:
 
-## 3. App — Vercel
+   - `TURSO_DATABASE_URL`
+   - `TURSO_AUTH_TOKEN`
 
-1. Push the repo to GitHub.
-2. [vercel.com](https://vercel.com) → **Add New Project** → import the repo
-   (framework = Next.js, auto-detected).
-3. **Environment Variables** (Production):
-   | Variable | Example |
-   |----------|---------|
-   | `DATABASE_URL` | `mysql://root:...@something.proxy.rlwy.net:port/railway` |
-   | `AUTH_SECRET` | long random string |
-   | `ADMIN_USERNAME` | `admin` |
-   | `ADMIN_PASSWORD` | a strong password |
-   | `NEXT_PUBLIC_SITE_URL` | `https://your-app.vercel.app` |
-   | `CLOUDINARY_CLOUD_NAME` | from Cloudinary dashboard |
-   | `CLOUDINARY_API_KEY` | from Cloudinary dashboard |
-   | `CLOUDINARY_API_SECRET` | from Cloudinary dashboard |
-4. Add every variable to the **Production** environment. Add them to **Preview**
-   only when preview deployments intentionally use a database and Cloudinary account.
-5. **Deploy.** `npm run build` now validates `DATABASE_URL`, generates Prisma Client,
-   and runs `prisma migrate deploy` before building Next.js. A fresh database gets
-   the tracked schema automatically.
-6. If the database was previously created with `prisma db push`, the first deployment
-   safely aligns it without a data-loss override, records the initial migration as a
-   baseline, and then switches to tracked migrations. Later deployments only apply
-   pending migrations.
-7. Environment-variable edits do not affect an existing Vercel deployment. Redeploy
-   after changing any variable.
+The production build runs `npm run db:deploy`, which safely creates the tables,
+indexes, and default categories on a new database. Later builds apply only new SQL
+migrations from `db/migrations/`.
 
-### Initial content
+## 4. Create the Cloudinary account
 
-The admin requires categories. For a completely new and empty database, you may run
-`npm run db:seed` once from a trusted local machine using the public Railway URL.
+1. Sign up at [cloudinary.com](https://cloudinary.com).
+2. Open the Cloudinary Console and go to **Settings → API Keys**.
+3. Copy the **Cloud name**, **API key**, and **API secret**.
+4. Add these Vercel Production environment variables:
 
-**Never run `db:seed` or `db:setup` on a populated database.** The seed intentionally
-deletes all posts, categories, and authors before loading starter content.
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
 
-## Migrating existing uploads (if you already have posts with `/uploads/...` images)
+The admin requests a short-lived signature from the application and then uploads
+images directly from the browser to Cloudinary. The API secret remains server-only,
+and images up to 8 MB do not pass through Vercel's request body.
 
-The local files in `public/uploads/` need to move to Cloudinary once. Run locally,
-pointing at your production DB and Cloudinary creds:
+## 5. Add the remaining Vercel variables
+
+Under **Project → Settings → Environment Variables**, add:
+
+| Variable | Value |
+|---|---|
+| `AUTH_SECRET` | A long random value, preferably 48+ characters |
+| `ADMIN_USERNAME` | Your private CMS username |
+| `ADMIN_PASSWORD` | A strong, unique CMS password |
+| `NEXT_PUBLIC_SITE_URL` | The production URL, such as `https://your-project.vercel.app` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+
+`TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` should already exist after connecting
+Turso. Add secrets to **Production**. Add them to **Preview** only if preview builds
+should use a database and Cloudinary account.
+
+## 6. Deploy
+
+Select **Deploy**. The build command is `npm run build`, which:
+
+1. validates the required production variables;
+2. applies pending Turso migrations; and
+3. builds the Next.js application.
+
+Environment-variable changes affect only new deployments. Redeploy after adding or
+changing a variable.
+
+## 7. Optional sample content
+
+The deployment migration automatically creates the categories required by the admin.
+If you also want the bundled sample posts, run the seed once from a trusted local
+machine after copying the two Turso variables from Vercel:
 
 ```bash
-DATABASE_URL="mysql://..." CLOUDINARY_CLOUD_NAME="..." CLOUDINARY_API_KEY="..." CLOUDINARY_API_SECRET="..." npm run backfill:images
+TURSO_DATABASE_URL="libsql://..." TURSO_AUTH_TOKEN="..." npm run db:seed
 ```
 
-Or put the values in a `.env` file and run `npm run backfill:images`. The script
-uploads every referenced local file, then rewrites each Post's `coverImage` and inline
-`<img src="/uploads/...">` to the Cloudinary URL.
+The seed creates starter categories, authors, and sample posts.
 
-## Gotchas
+> **Do not run `db:seed` or `db:setup` on a populated production database.** The
+> seed deliberately deletes all existing posts, categories, and authors first.
 
-- **Never commit `.env`.** Secrets live only in Vercel's env UI.
-- **Don't rotate `AUTH_SECRET`** casually — it invalidates admin sessions.
-- The production app refuses to start with missing authentication credentials or a
-  private Railway database hostname. This turns configuration errors into explicit
-  deployment failures instead of a broken admin page.
-- Prisma uses `connection_limit=1`, `pool_timeout=20`, and `connect_timeout=10` by
-  default at runtime unless those values are already present in `DATABASE_URL`. This
-  protects Railway MySQL from Vercel serverless connection spikes.
-- **No Edge runtime** in this codebase, so standard Prisma Client works in Vercel
-  serverless functions. If you later add `export const runtime = "edge"` anywhere
-  that touches Prisma, you'll need the `@prisma/adapter-*` driver adapter instead.
-- **Cloudinary free tier** has a monthly image-transformation credit cap. It's fine
-  for a blog; upgrade if you exceed it.
-- The cPanel bundle (`server.js`, `scripts/build-deploy.sh`, `start:cpanel`) is a
-  **separate** hosting path — ignore it for Vercel.
+## 8. Verify production
 
-## Troubleshooting the admin
+1. Open the homepage and a category page.
+2. Visit `/admin/login` and sign in.
+3. Create a test post and upload an image.
+4. Confirm the image appears in Cloudinary under the `techsastra` folder.
+5. Confirm the post remains after a Vercel redeployment.
 
-The admin now displays a safe error code returned by the API, and Vercel logs include
-the matching server-side detail:
+If you add a custom domain, update `NEXT_PUBLIC_SITE_URL` and redeploy.
+
+## Existing local images
+
+If old post HTML still references `/uploads/...`, place those files in
+`public/uploads/` and run this once with the production credentials:
+
+```bash
+TURSO_DATABASE_URL="libsql://..." \
+TURSO_AUTH_TOKEN="..." \
+CLOUDINARY_CLOUD_NAME="..." \
+CLOUDINARY_API_KEY="..." \
+CLOUDINARY_API_SECRET="..." \
+npm run backfill:images
+```
+
+The script uploads referenced files and replaces their local paths with Cloudinary
+URLs in Turso.
+
+## Troubleshooting
 
 | Code | Meaning | Fix |
-|------|---------|-----|
-| `P1000` | MySQL rejected credentials | Replace `DATABASE_URL` and redeploy |
-| `P1001` / `P1002` | MySQL cannot be reached | Use Railway's public TCP URL and check service status |
-| `P2021` / `P2022` | Missing table or column | Redeploy the latest commit so migrations run |
-| `P2024` | Connection pool timeout | Check Railway load; the app already limits each function to one connection |
-| `CLOUDINARY_NOT_CONFIGURED` | Missing Cloudinary variable | Add all three Cloudinary variables and redeploy |
-| `AUTH_CONFIGURATION_FAILED` | Missing admin/auth variable | Add `AUTH_SECRET`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` |
+|---|---|---|
+| `TURSO_NOT_CONFIGURED` | Missing Turso URL or token | Reconnect Turso or add both variables, then redeploy |
+| `TURSO_AUTHENTICATION_FAILED` | Invalid or expired token | Rotate/reconnect the Turso token and redeploy |
+| `TURSO_UNREACHABLE` | Network or database availability problem | Check the Turso URL, region, and service status |
+| `TURSO_SCHEMA_OUTDATED` | Missing table or column | Deploy the latest commit so migrations run |
+| `CLOUDINARY_NOT_CONFIGURED` | Missing Cloudinary credential | Add all three Cloudinary variables and redeploy |
+| `CLOUDINARY_UPLOAD_FAILED` | Cloudinary rejected the file | Check file type, size, account limits, and browser response |
+| `AUTH_CONFIGURATION_FAILED` | Missing CMS authentication variable | Add `AUTH_SECRET`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` |
+
+## Local development
+
+Local development uses `file:prisma/dev.db` when Turso variables are absent. That
+file is ignored by Git and is never used by Vercel. To create a fresh local schema
+and sample content:
+
+```bash
+npm run db:setup
+npm run dev
+```

@@ -4,21 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && npm run db:deploy && next build",
-    "build:app": "prisma generate && next build",
-    "start": "next start",
+    "build": "npm run db:deploy && next build",
+    "build:app": "next build",
+    "start": "node .next/standalone/server.js",
     "start:cpanel": "node server.js",
     "pack:cpanel": "bash scripts/build-deploy.sh",
     "lint": "eslint",
     "db:deploy": "node scripts/deploy-database.mjs",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:setup": "prisma db push && tsx prisma/seed.ts",
-    "backfill:images": "tsx scripts/backfill-cloudinary.ts",
-    "postinstall": "prisma generate"
+    "db:seed": "node --import tsx scripts/seed.ts",
+    "db:setup": "npm run db:deploy && npm run db:seed",
+    "backfill:images": "node --import tsx scripts/backfill-cloudinary.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
+    "@libsql/client": "^0.17.4",
     "cloudinary": "^2.10.0",
     "date-fns": "^4.4.0",
     "isomorphic-dompurify": "^3.19.0",
@@ -34,7 +32,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
-    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5"

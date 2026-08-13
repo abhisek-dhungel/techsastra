@@ -16,9 +16,6 @@ if [[ ! -d node_modules ]]; then
   npm ci || npm install
 fi
 
-echo "==> Generating Prisma client (MySQL)"
-npx prisma generate
-
 echo "==> Building Next.js (standalone)"
 npm run build
 
@@ -39,10 +36,6 @@ cp -R .next/static "$OUT_DIR/.next/static"
 rm -rf "$OUT_DIR/public"
 cp -R public "$OUT_DIR/public"
 
-# Prisma schema (for optional db push on server)
-mkdir -p "$OUT_DIR/prisma"
-cp prisma/schema.prisma "$OUT_DIR/prisma/schema.prisma"
-
 # Env template (real .env must be created on server)
 cp .env.example "$OUT_DIR/.env.example"
 
@@ -59,10 +52,14 @@ cat > "$OUT_DIR/START-ON-CPANEL.txt" <<'EOF'
 TechSastra — cPanel start (pre-built on Mac)
 ============================================
 
-1. Create MySQL DB + user in cPanel.
+1. Create a Turso database and Cloudinary account.
 2. In this folder create .env (copy from .env.example):
 
-   DATABASE_URL="mysql://USER:PASSWORD@localhost:3306/DBNAME"
+   TURSO_DATABASE_URL="libsql://..."
+   TURSO_AUTH_TOKEN="..."
+   CLOUDINARY_CLOUD_NAME="..."
+   CLOUDINARY_API_KEY="..."
+   CLOUDINARY_API_SECRET="..."
    AUTH_SECRET="long-random-string"
    ADMIN_USERNAME="admin"
    ADMIN_PASSWORD="strong-password"
@@ -73,9 +70,9 @@ TechSastra — cPanel start (pre-built on Mac)
    - Startup file = server.js
    - Node 18+ (20 recommended)
 
-4. Open app terminal / SSH in this folder and run ONCE:
-   npx prisma db push
-   (optional) npx prisma db seed
+4. Apply migrations before packaging or from the full source checkout:
+   npm run db:deploy
+   (optional, new empty database only) npm run db:seed
 
 5. Restart the Node.js app.
 
@@ -102,6 +99,6 @@ echo "  Size: $(du -h "$TGZ_PATH" | awk '{print $1}')"
 echo ""
 echo "In cPanel File Manager: Upload → Extract, OR via SSH:"
 echo "  tar -xzf techsastra-cpanel.tar.gz"
-echo "Then add .env, prisma db push, restart Node app."
+echo "Then add .env and restart the Node app."
 echo ""
 echo "Do NOT use .zip on hosts with Sanesecurity Foxhole — it flags Node apps."

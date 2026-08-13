@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { PostContent } from "@/components/PostContent";
 import { formatPostDate } from "@/lib/dates";
+import { listPublishedPostSlugs } from "@/lib/database";
 import { categoryLabel, getPostBySlug } from "@/lib/posts";
 import {
   SITE,
@@ -20,12 +21,8 @@ export const revalidate = 60;
 
 export async function generateStaticParams() {
   try {
-    const { prisma } = await import("@/lib/prisma");
-    const posts = await prisma.post.findMany({
-      where: { published: true },
-      select: { slug: true },
-    });
-    return posts.map((post) => ({ slug: post.slug }));
+    const slugs = await listPublishedPostSlugs();
+    return slugs.map((slug) => ({ slug }));
   } catch {
     return [];
   }

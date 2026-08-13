@@ -1,55 +1,130 @@
-import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { NAV_CATEGORIES } from "../src/lib/categories";
-
-const prisma = new PrismaClient();
+import { getDatabase, nowTimestamp } from "../src/lib/turso";
 
 const PLACEHOLDER = (seed: string) =>
   `https://picsum.photos/seed/${encodeURIComponent(seed)}/800/500`;
 
-async function main() {
-  await prisma.post.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.author.deleteMany();
+async function createAuthor(data: {
+  name: string;
+  slug: string;
+  bio: string;
+}) {
+  const id = randomUUID();
+  await getDatabase().execute({
+    sql: `
+      INSERT INTO "Author" ("id", "name", "slug", "bio", "avatar", "createdAt")
+      VALUES (?, ?, ?, ?, NULL, ?)
+    `,
+    args: [id, data.name, data.slug, data.bio, nowTimestamp()],
+  });
+  return { id };
+}
 
-  const author = await prisma.author.create({
-    data: {
-      name: "Abhisek Dhungel",
-      slug: "abhisek-dhungel",
-      bio: "Editor at TechSastra covering gadgets, autos, and tech in Nepal.",
-    },
+async function createCategory(data: {
+  name: string;
+  slug: string;
+  parentId?: string;
+  order: number;
+}) {
+  const id = randomUUID();
+  await getDatabase().execute({
+    sql: `
+      INSERT INTO "Category" ("id", "name", "slug", "parentId", "order", "createdAt")
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+    args: [
+      id,
+      data.name,
+      data.slug,
+      data.parentId ?? null,
+      data.order,
+      nowTimestamp(),
+    ],
+  });
+  return { id };
+}
+
+async function createPost(data: {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  featured: boolean;
+  categoryId: string;
+  authorId: string;
+  published: boolean;
+  publishedAt: Date;
+}) {
+  const now = nowTimestamp();
+  await getDatabase().execute({
+    sql: `
+      INSERT INTO "Post" (
+        "id", "title", "slug", "excerpt", "content", "coverImage",
+        "published", "featured", "views", "categoryId",
+        "secondaryCategoryId", "authorId", "publishedAt", "createdAt", "updatedAt"
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL, ?, ?, ?, ?)
+    `,
+    args: [
+      randomUUID(),
+      data.title,
+      data.slug,
+      data.excerpt,
+      data.content,
+      data.coverImage,
+      data.published,
+      data.featured,
+      data.categoryId,
+      data.authorId,
+      data.publishedAt.getTime(),
+      now,
+      now,
+    ],
+  });
+}
+
+async function main() {
+  await getDatabase().batch(
+    [
+      'DELETE FROM "Post"',
+      'DELETE FROM "Category"',
+      'DELETE FROM "Author"',
+    ],
+    "write",
+  );
+
+  const author = await createAuthor({
+    name: "Abhisek Dhungel",
+    slug: "abhisek-dhungel",
+    bio: "Editor at TechSastra covering gadgets, autos, and tech in Nepal.",
   });
 
-  const author2 = await prisma.author.create({
-    data: {
-      name: "Robhas Sharma",
-      slug: "robhas-sharma",
-      bio: "Automotive and EV correspondent.",
-    },
+  const author2 = await createAuthor({
+    name: "Robhas Sharma",
+    slug: "robhas-sharma",
+    bio: "Automotive and EV correspondent.",
   });
 
   const categoryMap = new Map<string, string>();
 
   for (let i = 0; i < NAV_CATEGORIES.length; i++) {
     const cat = NAV_CATEGORIES[i];
-    const parent = await prisma.category.create({
-      data: {
-        name: cat.name,
-        slug: cat.slug,
-        order: i,
-      },
+    const parent = await createCategory({
+      name: cat.name,
+      slug: cat.slug,
+      order: i,
     });
     categoryMap.set(cat.slug, parent.id);
 
     if ("children" in cat && cat.children) {
       for (let j = 0; j < cat.children.length; j++) {
         const child = cat.children[j];
-        const created = await prisma.category.create({
-          data: {
-            name: child.name,
-            slug: child.slug,
-            parentId: parent.id,
-            order: j,
-          },
+        const created = await createCategory({
+          name: child.name,
+          slug: child.slug,
+          parentId: parent.id,
+          order: j,
         });
         categoryMap.set(child.slug, created.id);
       }
@@ -311,19 +386,19 @@ Range figures always depend on speed, weather, and driving style, so treat broch
     if (!categoryId) {
       throw new Error(`Missing category: ${post.category}`);
     }
-    await prisma.post.create({
-      data: {
-        title: post.title,
-        slug: post.slug,
-        excerpt: post.excerpt,
-        content: post.content,
-        coverImage: post.coverImage,
-        featured: post.featured ?? false,
-        categoryId,
-        authorId: post.authorId,
-        published: true,
-        publishedAt: post.publishedAt ?? new Date(Date.UTC(2026, 6, 20 - posts.indexOf(post), 10)),
-      },
+    await createPost({
+      title: post.title,
+      slug: post.slug,
+      excerpt: post.excerpt,
+      content: post.content,
+      coverImage: post.coverImage,
+      featured: post.featured ?? false,
+      categoryId,
+      authorId: post.authorId,
+      published: true,
+      publishedAt:
+        post.publishedAt ??
+        new Date(Date.UTC(2026, 6, 20 - posts.indexOf(post), 10)),
     });
   }
 
@@ -336,7 +411,4 @@ main()
   .catch((e) => {
     console.error(e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

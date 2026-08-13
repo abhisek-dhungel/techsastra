@@ -75,13 +75,51 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 async function uploadImage(file: File) {
+  const allowedTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ]);
+  if (!allowedTypes.has(file.type)) {
+    throw new ApiError("Only JPG, PNG, WEBP, and GIF images are allowed.", 400);
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    throw new ApiError("Image must be 8MB or smaller.", 400);
+  }
+
+  const signed = await apiJson<{
+    cloudName: string;
+    apiKey: string;
+    timestamp: number;
+    folder: string;
+    signature: string;
+  }>("/api/upload", {
+    method: "POST",
+  });
+
   const body = new FormData();
   body.append("file", file);
-  const data = await apiJson<{ url: string }>("/api/upload", {
-    method: "POST",
-    body,
-  });
-  return data.url as string;
+  body.append("api_key", signed.apiKey);
+  body.append("timestamp", String(signed.timestamp));
+  body.append("folder", signed.folder);
+  body.append("signature", signed.signature);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${encodeURIComponent(signed.cloudName)}/image/upload`,
+    { method: "POST", body },
+  );
+  const result = (await response.json().catch(() => null)) as
+    | { secure_url?: string; error?: { message?: string } }
+    | null;
+  if (!response.ok || !result?.secure_url) {
+    throw new ApiError(
+      result?.error?.message || "Cloudinary rejected the image upload.",
+      response.status || 502,
+      "CLOUDINARY_UPLOAD_FAILED",
+    );
+  }
+  return result.secure_url;
 }
 
 export default function AdminPage() {

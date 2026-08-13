@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Mulish, Open_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -11,27 +10,6 @@ import {
   organizationJsonLd,
   websiteJsonLd,
 } from "@/lib/seo";
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-
-const mulish = Mulish({
-  variable: "--font-mulish",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
-  display: "swap",
-});
-
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -123,10 +101,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en-NP"
-      className={`${outfit.variable} ${mulish.variable} ${openSans.variable}`}
-    >
+    <html lang="en-NP">
       <body>
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         <Header />

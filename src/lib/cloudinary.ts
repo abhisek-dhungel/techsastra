@@ -27,6 +27,12 @@ function configureCloudinary() {
     api_secret: values.CLOUDINARY_API_SECRET,
     secure: true,
   });
+
+  return {
+    cloudName: values.CLOUDINARY_CLOUD_NAME!,
+    apiKey: values.CLOUDINARY_API_KEY!,
+    apiSecret: values.CLOUDINARY_API_SECRET!,
+  };
 }
 
 export const CLOUDINARY_FOLDER = "techsastra";
@@ -34,6 +40,19 @@ export const CLOUDINARY_FOLDER = "techsastra";
 export interface CloudinaryUpload {
   url: string;
   publicId: string;
+}
+
+export function createUploadSignature() {
+  const { cloudName, apiKey, apiSecret } = configureCloudinary();
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = { folder: CLOUDINARY_FOLDER, timestamp };
+  return {
+    cloudName,
+    apiKey,
+    timestamp,
+    folder: CLOUDINARY_FOLDER,
+    signature: cloudinary.utils.api_sign_request(params, apiSecret),
+  };
 }
 
 /**

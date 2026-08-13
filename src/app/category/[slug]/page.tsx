@@ -4,7 +4,13 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { PostCard } from "@/components/PostCard";
 import { getPostsByCategorySlug } from "@/lib/posts";
-import { prisma } from "@/lib/prisma";
+import {
+  findCategoryById,
+  findCategoryBySlug,
+  listCategorySlugs,
+  listChildCategories,
+  type CategoryRecord,
+} from "@/lib/database";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -17,10 +23,8 @@ export const revalidate = 60;
 
 export async function generateStaticParams() {
   try {
-    const categories = await prisma.category.findMany({
-      select: { slug: true },
-    });
-    return categories.map((category) => ({ slug: category.slug }));
+    const slugs = await listCategorySlugs();
+    return slugs.map((slug) => ({ slug }));
   } catch {
     return [];
   }
@@ -29,10 +33,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const category = await prisma.category.findUnique({
-      where: { slug },
-      include: { parent: true },
-    });
+    const category = await findCategoryBySlug(slug);
     if (!category) {
       return { title: "Category", robots: { index: false, follow: false } };
     }
@@ -67,15 +68,12 @@ export default async function CategoryPage({ params }: Props) {
   const { category, posts } = await getPostsByCategorySlug(slug, 24);
   if (!category) notFound();
 
-  let children: Awaited<ReturnType<typeof prisma.category.findMany>> = [];
-  let parent: Awaited<ReturnType<typeof prisma.category.findUnique>> = null;
+  let children: CategoryRecord[] = [];
+  let parent: CategoryRecord | null = null;
   try {
-    children = await prisma.category.findMany({
-      where: { parentId: category.id },
-      orderBy: { order: "asc" },
-    });
+    children = await listChildCategories(category.id);
     parent = category.parentId
-      ? await prisma.category.findUnique({ where: { id: category.parentId } })
+      ? await findCategoryById(category.parentId)
       : null;
   } catch {
     // Build/offline: skip related category lookups

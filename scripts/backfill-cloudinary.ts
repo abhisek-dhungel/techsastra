@@ -3,20 +3,22 @@
  * Cloudinary, then rewrite the Post rows (coverImage + inline <img src="/uploads/...">)
  * to the new Cloudinary URLs.
  *
- * Run this ONCE, locally, against your production DATABASE_URL:
- *   DATABASE_URL="mysql://..." CLOUDINARY_CLOUD_NAME=... CLOUDINARY_API_KEY=... CLOUDINARY_API_SECRET=... npx tsx scripts/backfill-cloudinary.ts
+ * Run this ONCE, locally, against your production Turso database:
+ *   TURSO_DATABASE_URL="libsql://..." TURSO_AUTH_TOKEN=... CLOUDINARY_CLOUD_NAME=... CLOUDINARY_API_KEY=... CLOUDINARY_API_SECRET=... npx tsx scripts/backfill-cloudinary.ts
  *
  * Alternatively put the values in a .env file and run `npm run backfill:images`.
  */
+import { readFileSync } from "fs";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
-import { prisma } from "../src/lib/prisma";
 import { uploadBuffer } from "../src/lib/cloudinary";
+import {
+  listPostImagesForBackfill,
+  updatePostImages,
+} from "../src/lib/database";
 
-// Minimal .env loader (no extra dependency). Prisma already auto-loads .env
-// for DATABASE_URL; this ensures Cloudinary creds are set too when run with npm script.
+// Minimal .env loader for this standalone script.
 function loadDotEnv() {
-  const { readFileSync } = require("fs");
   try {
     const raw = readFileSync(path.join(process.cwd(), ".env"), "utf-8");
     for (const line of raw.split("\n")) {
@@ -49,7 +51,7 @@ async function main() {
     process.exit(1);
   }
 
-  const posts = await prisma.post.findMany({ select: { id: true, coverImage: true, content: true } });
+  const posts = await listPostImagesForBackfill();
   const files = new Set(await readdir(UPLOADS_DIR).catch(() => [] as string[]));
   if (files.size === 0) {
     console.log("No files in public/uploads — nothing to backfill.");
@@ -98,10 +100,7 @@ async function main() {
     );
 
     if (cover !== p.coverImage || content !== p.content) {
-      await prisma.post.update({
-        where: { id: p.id },
-        data: { coverImage: cover, content },
-      });
+      await updatePostImages(p.id, cover, content);
       updatedCount += 1;
     }
   }
@@ -114,5 +113,4 @@ main()
   .catch((err) => {
     console.error(err);
     process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+  });

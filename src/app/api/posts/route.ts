@@ -1,24 +1,23 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import slugify from "slugify";
-import { Prisma } from "@prisma/client";
 import { requireApiSession } from "@/lib/auth";
-import { logDatabaseError } from "@/lib/database-errors";
-import { prisma } from "@/lib/prisma";
+import {
+  isUniqueDatabaseError,
+  logDatabaseError,
+} from "@/lib/database-errors";
+import {
+  countExistingCategories,
+  createPost as insertPost,
+  listAllPosts,
+} from "@/lib/database";
 
 export async function GET() {
   const { error } = await requireApiSession();
   if (error) return error;
 
   try {
-    const posts = await prisma.post.findMany({
-      include: {
-        category: { include: { parent: true } },
-        secondaryCategory: { include: { parent: true } },
-        author: true,
-      },
-      orderBy: { publishedAt: "desc" },
-    });
+    const posts = await listAllPosts();
     return NextResponse.json(posts);
   } catch (reason) {
     const details = logDatabaseError("list posts", reason);
@@ -92,11 +91,10 @@ export async function POST(request: Request) {
       String(categoryId),
       ...(secondaryCategoryId ? [String(secondaryCategoryId)] : []),
     ];
-    const existingCategories = await prisma.category.findMany({
-      where: { id: { in: requestedCategoryIds } },
-      select: { id: true },
-    });
-    if (existingCategories.length !== new Set(requestedCategoryIds).size) {
+    const existingCategoryCount = await countExistingCategories(
+      requestedCategoryIds,
+    );
+    if (existingCategoryCount !== new Set(requestedCategoryIds).size) {
       return NextResponse.json(
         { error: "A selected category no longer exists. Reload and try again." },
         { status: 400 },
@@ -115,42 +113,24 @@ export async function POST(request: Request) {
     for (let attempt = 0; attempt < 10; attempt++) {
       const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt}`;
       try {
-        post = await prisma.post.create({
-          data: {
-            title,
-            slug,
-            content,
-            excerpt: excerpt || null,
-            coverImage: coverImage || null,
-            category: { connect: { id: String(categoryId) } },
-            ...(secondaryCategoryId
-              ? {
-                  secondaryCategory: {
-                    connect: { id: String(secondaryCategoryId) },
-                  },
-                }
-              : {}),
-            author: {
-              connectOrCreate: {
-                where: { slug: authorSlug },
-                create: { name: authorLabel, slug: authorSlug },
-              },
-            },
-            featured: Boolean(featured),
-            published: published !== false,
-          },
-          include: {
-            category: true,
-            secondaryCategory: true,
-            author: true,
-          },
+        post = await insertPost({
+          title,
+          slug,
+          content,
+          excerpt: excerpt || null,
+          coverImage: coverImage || null,
+          categoryId: String(categoryId),
+          secondaryCategoryId: secondaryCategoryId
+            ? String(secondaryCategoryId)
+            : null,
+          authorName: authorLabel,
+          authorSlug,
+          featured: Boolean(featured),
+          published: published !== false,
         });
         break;
       } catch (reason) {
-        if (
-          reason instanceof Prisma.PrismaClientKnownRequestError &&
-          reason.code === "P2002"
-        ) {
+        if (isUniqueDatabaseError(reason)) {
           continue;
         }
         throw reason;

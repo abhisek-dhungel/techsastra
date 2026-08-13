@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
+import {
+  listSitemapCategories,
+  listSitemapPosts,
+} from "@/lib/database";
 import { absoluteUrl } from "@/lib/seo";
 
 export const revalidate = 3600;
@@ -23,14 +26,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const [posts, categories] = await Promise.all([
-      prisma.post.findMany({
-        where: { published: true },
-        select: { slug: true, updatedAt: true, publishedAt: true },
-        orderBy: { publishedAt: "desc" },
-      }),
-      prisma.category.findMany({
-        select: { slug: true, createdAt: true },
-      }),
+      listSitemapPosts(),
+      listSitemapCategories(),
     ]);
 
     const categoryPages: MetadataRoute.Sitemap = categories.map((category) => ({

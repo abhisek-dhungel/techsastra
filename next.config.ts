@@ -23,12 +23,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["date-fns"],
   },
-  outputFileTracingIncludes: {
-    "/**": [
-      "./node_modules/.prisma/**/*",
-      "./node_modules/@prisma/client/**/*",
-    ],
-  },
 };
 
 export default nextConfig;

@@ -126,33 +126,35 @@ export function Header() {
             </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              <a
-                href="https://www.facebook.com/official.techsastra/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Facebook"
-                className="social-chip"
-              >
-                <FacebookIcon />
-              </a>
-              <a
-                href="https://www.instagram.com/tech.sastra"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram"
-                className="social-chip"
-              >
-                <InstagramIcon />
-              </a>
-              <a
-                href="https://www.youtube.com/@techsastra1"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="YouTube"
-                className="social-chip"
-              >
-                <YoutubeIcon />
-              </a>
+              <div className="header-social-links">
+                <a
+                  href="https://www.facebook.com/official.techsastra/"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Facebook"
+                  className="social-chip"
+                >
+                  <FacebookIcon />
+                </a>
+                <a
+                  href="https://www.instagram.com/tech.sastra"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram"
+                  className="social-chip"
+                >
+                  <InstagramIcon />
+                </a>
+                <a
+                  href="https://www.youtube.com/@techsastra1"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="YouTube"
+                  className="social-chip"
+                >
+                  <YoutubeIcon />
+                </a>
+              </div>
               <button
                 type="button"
                 className="mobile-nav menu-chip"

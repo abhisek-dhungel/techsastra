@@ -1122,6 +1122,12 @@ img {
   border-color: var(--ts-lime-soft);
 }
 
+.header-social-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .view-all {
   font-family: var(--font-outfit), var(--font-mulish), sans-serif;
   font-size: 0.8rem;
@@ -1178,9 +1184,7 @@ img {
     display: block;
   }
 
-  /* Hide social icons in the mobile navigation bar only.
-     Desktop keeps them (see .header-bar-row .social-chip below). */
-  .header-bar-row .social-chip {
+  .header-social-links {
     display: none;
   }
 
@@ -1198,12 +1202,6 @@ img {
 
   .latest-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-}
-
-@media (min-width: 901px) {
-  .header-bar-row .social-chip {
-    display: inline-flex;
   }
 }
 

@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { PostContent } from "@/components/PostContent";
 import { formatPostDate } from "@/lib/dates";
-import { listPublishedPostSlugs } from "@/lib/database";
 import { categoryLabel, getPostBySlug } from "@/lib/posts";
 import {
   SITE,
@@ -17,16 +16,9 @@ import {
 
 type Props = { params: Promise<{ slug: string }> };
 
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  try {
-    const slugs = await listPublishedPostSlugs();
-    return slugs.map((slug) => ({ slug }));
-  } catch {
-    return [];
-  }
-}
+// Posts are published from the CMS after deployment, so every slug must be
+// resolved against the live database instead of the build-time slug list.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

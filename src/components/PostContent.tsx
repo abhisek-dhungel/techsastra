@@ -1,5 +1,18 @@
+import sanitizeHtml from "sanitize-html";
+
 type Props = {
   content: string;
+};
+
+const POST_HTML_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [...sanitizeHtml.defaults.allowedTags, "img"],
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    a: ["href", "name", "target", "rel"],
+    img: ["src", "srcset", "alt", "title", "width", "height", "loading"],
+  },
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowProtocolRelative: false,
 };
 
 function looksLikeHtml(content: string) {
@@ -26,14 +39,9 @@ function renderPlainBlocks(content: string) {
   });
 }
 
-export async function PostContent({ content }: Props) {
+export function PostContent({ content }: Props) {
   if (looksLikeHtml(content)) {
-    // Load sanitizer only when HTML is present (avoids cost on plain posts)
-    const DOMPurify = (await import("isomorphic-dompurify")).default;
-    const clean = DOMPurify.sanitize(content, {
-      USE_PROFILES: { html: true },
-      ADD_ATTR: ["target", "rel"],
-    });
+    const clean = sanitizeHtml(content, POST_HTML_OPTIONS);
     return (
       <div
         className="prose-ts"

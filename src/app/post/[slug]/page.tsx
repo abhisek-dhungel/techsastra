@@ -3,10 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
-import {
-  PostContent,
-  isEmbeddedPostContent,
-} from "@/components/PostContent";
+import { PostContent } from "@/components/PostContent";
 import { formatPostDate } from "@/lib/dates";
 import { categoryLabel, getPostBySlug } from "@/lib/posts";
 import {
@@ -92,7 +89,6 @@ export default async function PostPage({ params }: Props) {
   if (!post || !post.published) notFound();
 
   const description = seoDescriptionFromContent(post.excerpt, post.content);
-  const hasEmbeddedContent = isEmbeddedPostContent(post.content);
   const url = absoluteUrl(`/post/${post.slug}`);
   const image = post.coverImage
     ? absoluteUrl(post.coverImage)
@@ -144,119 +140,95 @@ export default async function PostPage({ params }: Props) {
   };
 
   return (
-    <article className="py-8 md:py-10" itemScope itemType="https://schema.org/NewsArticle">
+    <article className="container-ts py-8 md:py-10" itemScope itemType="https://schema.org/NewsArticle">
       <JsonLd data={[breadcrumbJsonLd(breadcrumbItems), articleJsonLd]} />
-      <div className="container-ts">
-        <div className="glass max-w-3xl p-5 md:p-8">
-          <nav aria-label="Breadcrumb" className="mb-4 text-xs text-ts-muted">
-            <ol className="m-0 flex list-none flex-wrap items-center gap-1 p-0">
-              <li>
-                <Link href="/">Home</Link>
-                <span aria-hidden className="mx-1">
-                  /
-                </span>
-              </li>
-              <li>
-                <Link href={`/category/${post.category.slug}`}>
-                  {post.category.name}
-                </Link>
-                <span aria-hidden className="mx-1">
-                  /
-                </span>
-              </li>
-              <li className="line-clamp-1" aria-current="page">
-                {post.title}
-              </li>
-            </ol>
-          </nav>
+      <div className="glass max-w-3xl p-5 md:p-8">
+        <nav aria-label="Breadcrumb" className="mb-4 text-xs text-ts-muted">
+          <ol className="m-0 flex list-none flex-wrap items-center gap-1 p-0">
+            <li>
+              <Link href="/">Home</Link>
+              <span aria-hidden className="mx-1">
+                /
+              </span>
+            </li>
+            <li>
+              <Link href={`/category/${post.category.slug}`}>
+                {post.category.name}
+              </Link>
+              <span aria-hidden className="mx-1">
+                /
+              </span>
+            </li>
+            <li className="line-clamp-1" aria-current="page">
+              {post.title}
+            </li>
+          </ol>
+        </nav>
 
-          <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Link
+            href={`/category/${post.category.slug}`}
+            className="cat-label mb-0"
+          >
+            {categoryLabel(post)}
+          </Link>
+          {post.secondaryCategory ? (
             <Link
-              href={`/category/${post.category.slug}`}
+              href={`/category/${post.secondaryCategory.slug}`}
               className="cat-label mb-0"
             >
-              {categoryLabel(post)}
+              {post.secondaryCategory.name}
             </Link>
-            {post.secondaryCategory ? (
-              <Link
-                href={`/category/${post.secondaryCategory.slug}`}
-                className="cat-label mb-0"
-              >
-                {post.secondaryCategory.name}
-              </Link>
-            ) : null}
-          </div>
-          <h1
-            className="m-0 text-[1.9rem] leading-tight tracking-tight md:text-[2.35rem]"
-            style={{
-              fontFamily: "var(--font-outfit), sans-serif",
-              fontWeight: 700,
-            }}
-            itemProp="headline"
-          >
-            {post.title}
-          </h1>
-          <p className="author-meta mt-3 text-sm">
-            By{" "}
-            <span
-              itemProp="author"
-              itemScope
-              itemType="https://schema.org/Person"
-            >
-              <span itemProp="name">{post.author.name}</span>
-            </span>{" "}
-            ·{" "}
-            <time dateTime={published} itemProp="datePublished">
-              {formatPostDate(post.publishedAt)}
-            </time>
-          </p>
-          <meta
-            itemProp="dateModified"
-            content={post.updatedAt.toISOString()}
-          />
-
-          {post.coverImage ? (
-            <div className="mt-6 overflow-hidden rounded-2xl">
-              <Image
-                src={post.coverImage}
-                alt={post.title}
-                width={1200}
-                height={675}
-                className="w-full object-cover"
-                sizes="(max-width: 900px) 100vw, 720px"
-                quality={75}
-                priority
-                itemProp="image"
-              />
-            </div>
-          ) : null}
-
-          {post.excerpt ? (
-            <p
-              className="mt-6 text-lg leading-relaxed text-[#444]"
-              itemProp="description"
-            >
-              {post.excerpt}
-            </p>
-          ) : null}
-
-          {!hasEmbeddedContent ? (
-            <div className="mt-6" itemProp="articleBody">
-              <PostContent content={post.content} />
-            </div>
           ) : null}
         </div>
-      </div>
-
-      {hasEmbeddedContent ? (
-        <section
-          className="embedded-post-section mt-6"
-          aria-label="Post content"
-          itemProp="articleBody"
+        <h1
+          className="m-0 text-[1.9rem] leading-tight tracking-tight md:text-[2.35rem]"
+          style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 700 }}
+          itemProp="headline"
         >
+          {post.title}
+        </h1>
+        <p className="author-meta mt-3 text-sm">
+          By{" "}
+          <span itemProp="author" itemScope itemType="https://schema.org/Person">
+            <span itemProp="name">{post.author.name}</span>
+          </span>{" "}
+          ·{" "}
+          <time
+            dateTime={published}
+            itemProp="datePublished"
+          >
+            {formatPostDate(post.publishedAt)}
+          </time>
+        </p>
+        <meta itemProp="dateModified" content={post.updatedAt.toISOString()} />
+
+        {post.coverImage ? (
+          <div className="mt-6 overflow-hidden rounded-2xl">
+            <Image
+              src={post.coverImage}
+              alt={post.title}
+              width={1200}
+              height={675}
+              className="w-full object-cover"
+              sizes="(max-width: 900px) 100vw, 720px"
+              quality={75}
+              priority
+              itemProp="image"
+            />
+          </div>
+        ) : null}
+
+        {post.excerpt ? (
+          <p className="mt-6 text-lg leading-relaxed text-[#444]" itemProp="description">
+            {post.excerpt}
+          </p>
+        ) : null}
+
+        <div className="mt-6" itemProp="articleBody">
           <PostContent content={post.content} />
-        </section>
-      ) : null}
+        </div>
+      </div>
     </article>
   );
 }

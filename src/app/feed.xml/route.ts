@@ -12,16 +12,10 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-function toRssDate(value: Date | string | null | undefined) {
-  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
-  return Number.isNaN(date.getTime())
-    ? new Date().toUTCString()
-    : date.toUTCString();
-}
-
 export async function GET() {
   const posts = await getFeedPosts(30);
-  const lastBuild = toRssDate(posts[0]?.publishedAt);
+  const lastBuild =
+    posts[0]?.publishedAt?.toUTCString() ?? new Date().toUTCString();
 
   const items = posts
     .map((post) => {
@@ -30,7 +24,7 @@ export async function GET() {
         post.excerpt,
         stripHtml(post.content),
       );
-      const pubDate = toRssDate(post.publishedAt ?? post.createdAt);
+      const pubDate = (post.publishedAt ?? post.createdAt).toUTCString();
       return `
     <item>
       <title>${escapeXml(post.title)}</title>

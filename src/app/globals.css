@@ -883,20 +883,6 @@ img {
   color: rgba(20, 20, 20, 0.88);
 }
 
-.embedded-post-frame {
-  display: block;
-  width: 100%;
-  min-height: 24rem;
-  border: 0;
-  background: transparent;
-}
-
-.embedded-post-section {
-  width: 100%;
-  overflow: hidden;
-  background: #fff;
-}
-
 .prose-ts h1,
 .prose-ts h2,
 .prose-ts h3,

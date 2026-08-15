@@ -43,9 +43,7 @@ export async function POST(request: Request) {
     } = body;
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
-    // Keep post source byte-for-byte as submitted. In particular, trimming here
-    // changes complete HTML documents and embedded CSS/JavaScript.
-    const content = typeof body.content === "string" ? body.content : "";
+    const content = typeof body.content === "string" ? body.content.trim() : "";
     const excerpt = typeof body.excerpt === "string" ? body.excerpt.trim() : "";
     const coverImage =
       typeof body.coverImage === "string" ? body.coverImage.trim() : "";
@@ -54,7 +52,7 @@ export async function POST(request: Request) {
         ? body.authorName.trim()
         : "Abhisek Dhungel";
 
-    if (!title || !content.trim() || !categoryId) {
+    if (!title || !content || !categoryId) {
       return NextResponse.json(
         { error: "Title, content, and primary category are required." },
         { status: 400 },

@@ -41,12 +41,13 @@ export async function PATCH(request: Request, { params }: Params) {
     const body = await request.json();
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
-    const content = typeof body.content === "string" ? body.content.trim() : "";
+    // Preserve the exact HTML/CSS/JavaScript source entered in the editor.
+    const content = typeof body.content === "string" ? body.content : "";
     const excerpt = typeof body.excerpt === "string" ? body.excerpt.trim() : "";
     const coverImage =
       typeof body.coverImage === "string" ? body.coverImage.trim() : "";
 
-    if (!title || !content || !body.categoryId) {
+    if (!title || !content.trim() || !body.categoryId) {
       return NextResponse.json(
         { error: "Title, content, and primary category are required." },
         { status: 400 },

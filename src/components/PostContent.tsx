@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { EmbeddedPostContent } from "./EmbeddedPostContent";
 
 type Props = {
   content: string;
@@ -8,6 +9,7 @@ const POST_HTML_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [...sanitizeHtml.defaults.allowedTags, "img"],
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
+    "*": ["class", "id", "style"],
     a: ["href", "name", "target", "rel"],
     img: ["src", "srcset", "alt", "title", "width", "height", "loading"],
   },
@@ -17,6 +19,21 @@ const POST_HTML_OPTIONS: sanitizeHtml.IOptions = {
 
 function looksLikeHtml(content: string) {
   return /<\/?[a-z][\s\S]*>/i.test(content);
+}
+
+/**
+ * Rich documents need their own browsing context. React deliberately does not
+ * execute scripts inserted with `dangerouslySetInnerHTML`, while sanitizing the
+ * source removes the CSS and JavaScript that the author intentionally supplied.
+ */
+export function isEmbeddedPostContent(content: string) {
+  return (
+    /<!doctype\s+html/i.test(content) ||
+    /<\/?(?:html|head|body|style|script|link|iframe|canvas|svg|form|input|button|select|textarea|video|audio)(?:\s|>)/i.test(
+      content,
+    ) ||
+    /\son[a-z]+\s*=/i.test(content)
+  );
 }
 
 function renderPlainBlocks(content: string) {
@@ -40,6 +57,10 @@ function renderPlainBlocks(content: string) {
 }
 
 export function PostContent({ content }: Props) {
+  if (looksLikeHtml(content) && isEmbeddedPostContent(content)) {
+    return <EmbeddedPostContent content={content} />;
+  }
+
   if (looksLikeHtml(content)) {
     const clean = sanitizeHtml(content, POST_HTML_OPTIONS);
     return (

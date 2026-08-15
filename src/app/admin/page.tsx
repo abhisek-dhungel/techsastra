@@ -700,8 +700,9 @@ export default function AdminPage() {
               />
             </div>
             <p className="mb-2 text-xs text-ts-muted">
-              Place the cursor where you want a subheading or image, then use the
-              buttons. You can add multiple images throughout the article.
+              Paste plain text, article HTML, or a complete HTML document with
+              CSS and JavaScript. Custom code is preserved exactly and runs in an
+              isolated frame when the post is opened.
             </p>
             <textarea
               ref={contentRef}

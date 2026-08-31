@@ -1,7 +1,33 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowUpRight,
+  BarChart3,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Eye,
+  FileText,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  PencilLine,
+  Plus,
+  Search,
+  Send,
+  Sparkles,
+  Star,
+  Trash2,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import {
   FormEvent,
   useEffect,
@@ -38,7 +64,11 @@ type Post = {
   } | null;
   author: { name: string };
   publishedAt: string;
+  views: number;
 };
+
+type WorkspaceView = "dashboard" | "editor";
+type PostFilter = "all" | "published" | "drafts" | "featured";
 
 class ApiError extends Error {
   constructor(
@@ -139,6 +169,11 @@ export default function AdminPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [workspaceView, setWorkspaceView] =
+    useState<WorkspaceView>("dashboard");
+  const [postFilter, setPostFilter] = useState<PostFilter>("all");
+  const [query, setQuery] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -178,6 +213,46 @@ export default function AdminPage() {
   const selectedCategoryId = form.subcategoryId || form.parentCategoryId;
   const selectedSecondaryId =
     form.secondarySubcategoryId || form.secondaryParentId || "";
+
+  const stats = useMemo(() => {
+    const published = posts.filter((post) => post.published).length;
+    const featured = posts.filter((post) => post.featured).length;
+    const views = posts.reduce((total, post) => total + (post.views || 0), 0);
+    return {
+      total: posts.length,
+      published,
+      drafts: posts.length - published,
+      featured,
+      views,
+    };
+  }, [posts]);
+
+  const filteredPosts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return posts.filter((post) => {
+      const matchesFilter =
+        postFilter === "all" ||
+        (postFilter === "published" && post.published) ||
+        (postFilter === "drafts" && !post.published) ||
+        (postFilter === "featured" && post.featured);
+      const matchesQuery =
+        !normalizedQuery ||
+        post.title.toLowerCase().includes(normalizedQuery) ||
+        post.category.name.toLowerCase().includes(normalizedQuery) ||
+        post.author.name.toLowerCase().includes(normalizedQuery);
+      return matchesFilter && matchesQuery;
+    });
+  }, [postFilter, posts, query]);
+
+  const editorWordCount = useMemo(
+    () =>
+      form.content
+        .replace(/<[^>]+>/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length,
+    [form.content],
+  );
 
   async function load() {
     setLoading(true);
@@ -260,6 +335,17 @@ export default function AdminPage() {
       featured: post.featured,
       published: post.published,
     });
+    setWorkspaceView("editor");
+    setMobileNavOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function beginNewPost() {
+    resetForm();
+    setMessage(null);
+    setError(null);
+    setWorkspaceView("editor");
+    setMobileNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -361,6 +447,7 @@ export default function AdminPage() {
     setSaving(true);
     setMessage(null);
     setError(null);
+    const wasEditing = Boolean(editingId);
     try {
       const payload = {
         title: form.title,
@@ -382,9 +469,10 @@ export default function AdminPage() {
           body: JSON.stringify(payload),
         },
       );
-      setMessage(editingId ? `Updated: ${data.title}` : `Published: ${data.title}`);
+      setMessage(wasEditing ? `Updated: ${data.title}` : `Published: ${data.title}`);
       resetForm();
       await load();
+      setWorkspaceView("dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -404,51 +492,186 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container-ts relative py-8 md:py-10">
-      <div className="glass relative z-[1] mb-6 flex flex-wrap items-end justify-between gap-4 p-5 md:p-6">
-        <div>
-          <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-[#7a9200]">
-            CMS Dashboard
-          </p>
-          <h1 className="section-title m-0">
-            {editingId ? (
-              <>
-                Edit <span>post</span>
-              </>
-            ) : (
-              <>
-                Publish a <span>post</span>
-              </>
-            )}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-ts-muted">
-            {editingId
-              ? "Update the selected post, then save your changes."
-              : "Upload cover and inline images, add mid-post subheadings, and optionally set a secondary category."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {username ? (
-            <span className="rounded-full border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-ts-muted">
-              Signed in as <span className="text-[#141414]">{username}</span>
-            </span>
-          ) : null}
-          <Link href="/" className="btn-ghost text-sm font-semibold">
-            ← Back to site
-          </Link>
+    <div className="admin-shell">
+      <button
+        type="button"
+        className="admin-mobile-menu"
+        aria-label="Open dashboard menu"
+        aria-expanded={mobileNavOpen}
+        onClick={() => setMobileNavOpen((open) => !open)}
+      >
+        {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      <aside className={`admin-sidebar ${mobileNavOpen ? "is-open" : ""}`}>
+        <Link href="/" className="admin-brand" aria-label="TechSastra home">
+          <Image src="/logo.png" alt="TechSastra" width={188} height={26} priority />
+        </Link>
+        <div className="admin-workspace-label">Editorial workspace</div>
+
+        <nav className="admin-nav" aria-label="CMS navigation">
           <button
             type="button"
-            className="btn-ghost text-sm font-semibold"
-            onClick={logout}
-            disabled={loggingOut}
+            className={workspaceView === "dashboard" ? "active" : ""}
+            onClick={() => {
+              setWorkspaceView("dashboard");
+              setMobileNavOpen(false);
+            }}
           >
-            {loggingOut ? "Signing out…" : "Logout"}
+            <LayoutDashboard size={18} />
+            Overview
           </button>
-        </div>
-      </div>
+          <button
+            type="button"
+            className={workspaceView === "editor" ? "active" : ""}
+            onClick={beginNewPost}
+          >
+            <PencilLine size={18} />
+            New article
+            <Plus size={15} className="admin-nav-tail" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setWorkspaceView("dashboard");
+              setMobileNavOpen(false);
+              requestAnimationFrame(() =>
+                document.getElementById("content-library")?.scrollIntoView({
+                  behavior: "smooth",
+                }),
+              );
+            }}
+          >
+            <FileText size={18} />
+            Content library
+            <span className="admin-nav-count">{stats.total}</span>
+          </button>
+        </nav>
 
-      <div className="relative z-[1] grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <form onSubmit={onSubmit} className="glass space-y-4 p-5 md:p-6">
+        <div className="admin-sidebar-spacer" />
+        <div className="admin-sidebar-card">
+          <Sparkles size={18} />
+          <strong>TechSastra CMS</strong>
+          <span>Built for fast, focused publishing.</span>
+        </div>
+        <Link href="/" className="admin-sidebar-link">
+          <ArrowUpRight size={17} />
+          View live site
+        </Link>
+        <button
+          type="button"
+          className="admin-sidebar-link"
+          onClick={logout}
+          disabled={loggingOut}
+        >
+          <LogOut size={17} />
+          {loggingOut ? "Signing out…" : "Sign out"}
+        </button>
+      </aside>
+
+      <main className="admin-main">
+        <header className="admin-topbar">
+          <div>
+            <p className="admin-eyebrow">
+              {workspaceView === "dashboard" ? "Workspace" : "Story editor"}
+            </p>
+            <h1>
+              {workspaceView === "dashboard"
+                ? "Good to see you."
+                : editingId
+                  ? "Refine your story."
+                  : "Create something worth reading."}
+            </h1>
+          </div>
+          <div className="admin-profile">
+            <div className="admin-avatar" aria-hidden>
+              {(username || "A").slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <strong>{username || "Editor"}</strong>
+              <span>Administrator</span>
+            </div>
+          </div>
+        </header>
+
+        {message ? (
+          <div className="admin-notice is-success" role="status">
+            <CheckCircle2 size={18} />
+            <span>{message}</span>
+            <button type="button" onClick={() => setMessage(null)} aria-label="Dismiss message">
+              <X size={16} />
+            </button>
+          </div>
+        ) : null}
+        {error ? (
+          <div className="admin-notice is-error" role="alert">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)} aria-label="Dismiss error">
+              <X size={16} />
+            </button>
+          </div>
+        ) : null}
+
+        {workspaceView === "dashboard" ? (
+          <>
+            <section className="admin-welcome-panel">
+              <div>
+                <span className="admin-kicker">The newsroom, at a glance</span>
+                <h2>Turn what&apos;s happening in tech into what Nepal reads next.</h2>
+                <p>
+                  Draft, publish and manage every TechSastra story from one focused workspace.
+                </p>
+              </div>
+              <button type="button" className="admin-cta" onClick={beginNewPost}>
+                <Plus size={18} />
+                New article
+              </button>
+            </section>
+
+            <section className="admin-stats" aria-label="Publishing overview">
+              <div className="admin-stat-card is-accent">
+                <span className="admin-stat-icon"><FileText size={19} /></span>
+                <span>Total stories</span>
+                <strong>{stats.total}</strong>
+                <small>Across every category</small>
+              </div>
+              <div className="admin-stat-card">
+                <span className="admin-stat-icon"><CheckCircle2 size={19} /></span>
+                <span>Published</span>
+                <strong>{stats.published}</strong>
+                <small>Live on TechSastra</small>
+              </div>
+              <div className="admin-stat-card">
+                <span className="admin-stat-icon"><Clock3 size={19} /></span>
+                <span>Drafts</span>
+                <strong>{stats.drafts}</strong>
+                <small>Waiting for a final pass</small>
+              </div>
+              <div className="admin-stat-card">
+                <span className="admin-stat-icon"><Eye size={19} /></span>
+                <span>Total views</span>
+                <strong>{stats.views.toLocaleString()}</strong>
+                <small>{stats.featured} featured stories</small>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+      <div
+        className={`admin-workspace-grid ${workspaceView === "dashboard" ? "is-dashboard" : "is-editor"}`}
+      >
+        <form onSubmit={onSubmit} className="admin-editor-card space-y-4">
+          <div className="admin-editor-heading">
+            <div>
+              <span>{editingId ? "Editing story" : "New story"}</span>
+              <h2>{editingId ? "Update article" : "Compose article"}</h2>
+            </div>
+            <div className="admin-editor-meta">
+              <span>{editorWordCount.toLocaleString()} words</span>
+              <span>{Math.max(1, Math.ceil(editorWordCount / 225))} min read</span>
+            </div>
+          </div>
           <label className="block">
             <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-[#555]">
               Title
@@ -612,10 +835,11 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                className="btn-ghost text-sm font-semibold"
+                className="admin-tool-button"
                 disabled={uploadingCover}
                 onClick={() => coverInputRef.current?.click()}
               >
+                <UploadCloud size={16} />
                 {uploadingCover ? "Uploading…" : "Upload cover"}
               </button>
               <input
@@ -669,24 +893,27 @@ export default function AdminPage() {
             <div className="mb-2 flex flex-wrap gap-2">
               <button
                 type="button"
-                className="btn-ghost text-xs font-semibold"
+                className="admin-tool-button"
                 onClick={() => insertSubheading(2)}
               >
-                + Subheading
+                <Heading2 size={16} />
+                Subheading
               </button>
               <button
                 type="button"
-                className="btn-ghost text-xs font-semibold"
+                className="admin-tool-button"
                 onClick={() => insertSubheading(3)}
               >
-                + Small heading
+                <Heading3 size={16} />
+                Small heading
               </button>
               <button
                 type="button"
-                className="btn-ghost text-xs font-semibold"
+                className="admin-tool-button"
                 disabled={uploadingInline}
                 onClick={() => inlineImageRef.current?.click()}
               >
+                <ImagePlus size={16} />
                 {uploadingInline ? "Uploading…" : "+ Insert image"}
               </button>
               <input
@@ -736,19 +963,9 @@ export default function AdminPage() {
             </label>
           </div>
 
-          {message ? (
-            <p className="rounded-xl border border-[rgba(216,255,0,0.3)] bg-[rgba(216,255,0,0.08)] px-3 py-2 text-sm font-semibold text-[#7a9200]">
-              {message}
-            </p>
-          ) : null}
-          {error ? (
-            <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
-            <button type="submit" className="btn-primary" disabled={saving}>
+          <div className="admin-editor-actions">
+            <button type="submit" className="admin-publish-button" disabled={saving}>
+              <Send size={17} />
               {saving
                 ? editingId
                   ? "Saving…"
@@ -760,68 +977,118 @@ export default function AdminPage() {
             {editingId ? (
               <button
                 type="button"
-                className="btn-ghost text-sm font-semibold"
+                className="admin-cancel-button"
                 onClick={() => {
                   resetForm();
                   setMessage(null);
                   setError(null);
+                  setWorkspaceView("dashboard");
                 }}
               >
+                <X size={16} />
                 Cancel edit
               </button>
             ) : null}
           </div>
         </form>
 
-        <aside className="glass p-5 md:p-6">
-          <h2
-            className="mb-4 text-lg font-bold tracking-tight text-[#141414]"
-            style={{ fontFamily: "var(--font-outfit), sans-serif" }}
-          >
-            Recent <span className="text-[#7a9200]">posts</span>
-          </h2>
+        <aside id="content-library" className="admin-library-card">
+          <div className="admin-library-head">
+            <div>
+              <span>Content library</span>
+              <h2>Recent stories</h2>
+            </div>
+            <BarChart3 size={21} />
+          </div>
+
+          <div className="admin-library-tools">
+            <label className="admin-search">
+              <Search size={17} />
+              <span className="sr-only">Search stories</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search stories…"
+              />
+            </label>
+            <div className="admin-filter-row" aria-label="Filter stories">
+              {(["all", "published", "drafts", "featured"] as PostFilter[]).map(
+                (filter) => (
+                  <button
+                    type="button"
+                    key={filter}
+                    className={postFilter === filter ? "active" : ""}
+                    onClick={() => setPostFilter(filter)}
+                  >
+                    {filter}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+
           {loading ? (
-            <p className="text-sm text-ts-muted">Loading…</p>
+            <div className="admin-loading-state">
+              <span />
+              <span />
+              <span />
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="admin-empty-state">
+              <FileText size={24} />
+              <strong>No stories found</strong>
+              <span>Try another search or clear the current filter.</span>
+            </div>
           ) : (
-            <ul className="m-0 list-none space-y-3 p-0">
-              {posts.map((post) => (
-                <li
-                  key={post.id}
-                  className="rounded-2xl border border-black/10 bg-white/70 p-3.5 text-sm"
-                >
-                  <div className="font-bold leading-snug text-[#141414]">
-                    {post.title}
+            <ul className="admin-post-list">
+              {filteredPosts.map((post) => (
+                <li key={post.id} className={editingId === post.id ? "is-editing" : ""}>
+                  <div className="admin-post-thumb">
+                    {post.coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={post.coverImage} alt="" />
+                    ) : (
+                      <ImagePlus size={20} />
+                    )}
                   </div>
-                  <div className="mt-1 text-xs text-ts-muted">
-                    {formatPostDate(post.publishedAt)} · {post.category.name}
-                    {post.secondaryCategory
-                      ? ` · ${post.secondaryCategory.name}`
-                      : ""}{" "}
-                    · {post.author.name}
-                    {post.featured ? " · Featured" : ""}
-                    {!post.published ? " · Draft" : ""}
-                    {editingId === post.id ? " · Editing" : ""}
+                  <div className="admin-post-copy">
+                    <div className="admin-post-badges">
+                      <span className={post.published ? "is-live" : "is-draft"}>
+                        {post.published ? "Published" : "Draft"}
+                      </span>
+                      {post.featured ? (
+                        <span className="is-featured"><Star size={11} /> Featured</span>
+                      ) : null}
+                      <span>{post.category.name}</span>
+                    </div>
+                    <strong>{post.title}</strong>
+                    <div className="admin-post-meta">
+                      <span>{formatPostDate(post.publishedAt)}</span>
+                      <span>{post.author.name}</span>
+                      <span><Eye size={13} /> {(post.views || 0).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="mt-2.5 flex gap-3 text-xs font-semibold">
+                  <div className="admin-post-actions">
                     <button
                       type="button"
-                      className="text-[#7a9200] hover:underline"
+                      aria-label={`Edit ${post.title}`}
                       onClick={() => startEdit(post)}
                     >
-                      Edit
+                      <PencilLine size={16} />
                     </button>
                     <Link
                       href={`/post/${post.slug}`}
-                      className="text-[#7a9200] hover:underline"
+                      aria-label={`View ${post.title}`}
                     >
-                      View
+                      <ChevronRight size={17} />
                     </Link>
                     <button
                       type="button"
-                      className="text-red-600 hover:text-red-500"
+                      className="is-danger"
+                      aria-label={`Delete ${post.title}`}
                       onClick={() => removePost(post.id)}
                     >
-                      Delete
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </li>
@@ -830,6 +1097,7 @@ export default function AdminPage() {
           )}
         </aside>
       </div>
+      </main>
     </div>
   );
 }

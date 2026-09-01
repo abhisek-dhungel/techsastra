@@ -1,18 +1,7 @@
-import sanitizeHtml from "sanitize-html";
+import { IsolatedHtmlContent } from "@/components/IsolatedHtmlContent";
 
 type Props = {
   content: string;
-};
-
-const POST_HTML_OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: [...sanitizeHtml.defaults.allowedTags, "img"],
-  allowedAttributes: {
-    ...sanitizeHtml.defaults.allowedAttributes,
-    a: ["href", "name", "target", "rel"],
-    img: ["src", "srcset", "alt", "title", "width", "height", "loading"],
-  },
-  allowedSchemes: ["http", "https", "mailto", "tel"],
-  allowProtocolRelative: false,
 };
 
 function looksLikeHtml(content: string) {
@@ -41,11 +30,11 @@ function renderPlainBlocks(content: string) {
 
 export function PostContent({ content }: Props) {
   if (looksLikeHtml(content)) {
-    const clean = sanitizeHtml(content, POST_HTML_OPTIONS);
     return (
-      <div
-        className="prose-ts"
-        dangerouslySetInnerHTML={{ __html: clean }}
+      <IsolatedHtmlContent
+        html={content}
+        title="Article content"
+        className="article-html-frame"
       />
     );
   }

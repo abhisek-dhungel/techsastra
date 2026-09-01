@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
+  Code2,
   Eye,
   FileText,
   Heading2,
@@ -35,6 +36,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { IsolatedHtmlContent } from "@/components/IsolatedHtmlContent";
 import { formatPostDate } from "@/lib/dates";
 
 type Category = {
@@ -69,6 +71,7 @@ type Post = {
 
 type WorkspaceView = "dashboard" | "editor";
 type PostFilter = "all" | "published" | "drafts" | "featured";
+type ContentView = "html" | "preview";
 
 class ApiError extends Error {
   constructor(
@@ -174,6 +177,7 @@ export default function AdminPage() {
   const [postFilter, setPostFilter] = useState<PostFilter>("all");
   const [query, setQuery] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [contentView, setContentView] = useState<ContentView>("html");
 
   const [form, setForm] = useState({
     title: "",
@@ -308,6 +312,7 @@ export default function AdminPage() {
       published: true,
     });
     setEditingId(null);
+    setContentView("html");
   }
 
   function startEdit(post: Post) {
@@ -335,6 +340,7 @@ export default function AdminPage() {
       featured: post.featured,
       published: post.published,
     });
+    setContentView("html");
     setWorkspaceView("editor");
     setMobileNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -887,57 +893,105 @@ export default function AdminPage() {
           </label>
 
           <div className="block">
-            <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-[#555]">
-              Content
-            </span>
-            <div className="mb-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="admin-tool-button"
-                onClick={() => insertSubheading(2)}
+            <div className="admin-content-head">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#555]">
+                Content
+              </span>
+              <div
+                className="admin-content-view-tabs"
+                role="tablist"
+                aria-label="Content view"
               >
-                <Heading2 size={16} />
-                Subheading
-              </button>
-              <button
-                type="button"
-                className="admin-tool-button"
-                onClick={() => insertSubheading(3)}
-              >
-                <Heading3 size={16} />
-                Small heading
-              </button>
-              <button
-                type="button"
-                className="admin-tool-button"
-                disabled={uploadingInline}
-                onClick={() => inlineImageRef.current?.click()}
-              >
-                <ImagePlus size={16} />
-                {uploadingInline ? "Uploading…" : "+ Insert image"}
-              </button>
-              <input
-                ref={inlineImageRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={(e) =>
-                  onInlineImageSelected(e.target.files?.[0] ?? null)
-                }
-              />
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={contentView === "html"}
+                  className={contentView === "html" ? "is-active" : ""}
+                  onClick={() => setContentView("html")}
+                >
+                  <Code2 size={14} />
+                  HTML
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={contentView === "preview"}
+                  className={contentView === "preview" ? "is-active" : ""}
+                  onClick={() => setContentView("preview")}
+                >
+                  <Eye size={14} />
+                  Preview
+                </button>
+              </div>
             </div>
+
+            {contentView === "html" ? (
+              <div className="mb-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="admin-tool-button"
+                  onClick={() => insertSubheading(2)}
+                >
+                  <Heading2 size={16} />
+                  Subheading
+                </button>
+                <button
+                  type="button"
+                  className="admin-tool-button"
+                  onClick={() => insertSubheading(3)}
+                >
+                  <Heading3 size={16} />
+                  Small heading
+                </button>
+                <button
+                  type="button"
+                  className="admin-tool-button"
+                  disabled={uploadingInline}
+                  onClick={() => inlineImageRef.current?.click()}
+                >
+                  <ImagePlus size={16} />
+                  {uploadingInline ? "Uploading…" : "+ Insert image"}
+                </button>
+                <input
+                  ref={inlineImageRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) =>
+                    onInlineImageSelected(e.target.files?.[0] ?? null)
+                  }
+                />
+              </div>
+            ) : null}
             <p className="mb-2 text-xs text-ts-muted">
-              Place the cursor where you want a subheading or image, then use the
-              buttons. You can add multiple images throughout the article.
+              HTML is saved exactly as entered. Preview and published styles run
+              in an isolated frame, so they cannot change the rest of TechSastra.
             </p>
-            <textarea
-              ref={contentRef}
-              className="admin-input min-h-[260px] font-mono text-sm"
-              required
-              value={form.content}
-              onChange={(e) => setForm({ ...form, content: e.target.value })}
-              placeholder={`<p>Intro paragraph...</p>\n<h2>Key specs</h2>\n<p>Details here...</p>\n<figure>\n  <img src="/uploads/example.jpg" alt="Product" />\n</figure>\n<p>More thoughts...</p>`}
-            />
+            {contentView === "html" ? (
+              <textarea
+                ref={contentRef}
+                className="admin-input min-h-[260px] font-mono text-sm"
+                required
+                spellCheck={false}
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                placeholder={`<p>Intro paragraph...</p>\n<h2>Key specs</h2>\n<p>Details here...</p>\n<figure>\n  <img src="/uploads/example.jpg" alt="Product" />\n</figure>\n<p>More thoughts...</p>`}
+              />
+            ) : (
+              <div className="admin-content-preview-shell" role="tabpanel">
+                {form.content.trim() ? (
+                  <IsolatedHtmlContent
+                    html={form.content}
+                    title="Post content preview"
+                    className="admin-content-preview"
+                  />
+                ) : (
+                  <p className="admin-content-preview-empty">
+                    Paste HTML in the HTML tab to preview it here.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-5 text-sm text-[#333]">

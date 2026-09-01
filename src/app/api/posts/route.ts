@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     } = body;
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
-    const content = typeof body.content === "string" ? body.content.trim() : "";
+    const content = typeof body.content === "string" ? body.content : "";
     const excerpt = typeof body.excerpt === "string" ? body.excerpt.trim() : "";
     const coverImage =
       typeof body.coverImage === "string" ? body.coverImage.trim() : "";
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         ? body.authorName.trim()
         : "Abhisek Dhungel";
 
-    if (!title || !content || !categoryId) {
+    if (!title || !content.trim() || !categoryId) {
       return NextResponse.json(
         { error: "Title, content, and primary category are required." },
         { status: 400 },

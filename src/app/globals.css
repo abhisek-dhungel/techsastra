@@ -2540,15 +2540,12 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-reading-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 740px);
-  justify-content: center;
-  align-items: start;
-  width: min(740px, calc(100% - 2rem));
+  width: min(1180px, calc(100% - 2rem));
   margin: clamp(3rem, 7vw, 6rem) auto clamp(4rem, 8vw, 7rem);
 }
 
 .article-copy-column {
+  width: min(860px, 78%);
   min-width: 0;
 }
 
@@ -2855,6 +2852,10 @@ body:has(.admin-shell) #main-content {
 
   .article-reading-grid {
     margin-top: 2.7rem;
+  }
+
+  .article-copy-column {
+    width: 100%;
   }
 
   .article-body .prose-ts {

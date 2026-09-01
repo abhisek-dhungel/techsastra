@@ -2516,8 +2516,13 @@ body:has(.admin-shell) #main-content {
   margin-top: 0.25rem;
 }
 
-.article-cover {
+.article-cover,
+.article-cover-caption,
+.article-copy-column {
   width: min(860px, 78%);
+}
+
+.article-cover {
   max-height: 520px;
   aspect-ratio: 16 / 8.8;
   object-fit: cover;
@@ -2536,7 +2541,6 @@ body:has(.admin-shell) #main-content {
   font-size: 0.59rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  width: min(860px, 78%);
 }
 
 .article-reading-grid {
@@ -2545,7 +2549,6 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-copy-column {
-  width: min(860px, 78%);
   min-width: 0;
 }
 

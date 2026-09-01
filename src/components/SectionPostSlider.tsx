@@ -13,7 +13,6 @@ export type SliderPost = {
   title: string;
   slug: string;
   coverImage: string | null;
-  authorName: string;
   categorySlug: string;
   categoryName: string;
   secondaryCategory: { slug: string; name: string } | null;
@@ -21,7 +20,6 @@ export type SliderPost = {
 
 type Props = {
   posts: SliderPost[];
-  dark?: boolean;
   /** double = 2 rows (Gadgets/Auto). single = 1 scrolling row. */
   layout?: "double" | "single";
 };
@@ -54,13 +52,7 @@ function ChevronRight() {
   );
 }
 
-function SliderCard({
-  post,
-  showAuthor,
-}: {
-  post: SliderPost;
-  showAuthor: boolean;
-}) {
+function SliderCard({ post }: { post: SliderPost }) {
   return (
     <article className="glass-card section-slider-card">
       {post.coverImage ? (
@@ -94,7 +86,6 @@ function SliderCard({
         <h3 className="post-title m-0 text-[1.12rem]">
           <Link href={`/post/${post.slug}`}>{post.title}</Link>
         </h3>
-        {showAuthor ? <p className="author-meta">{post.authorName}</p> : null}
       </div>
     </article>
   );
@@ -118,13 +109,11 @@ function SlidingRow({
   posts,
   index,
   stepPx,
-  showAuthor,
   trackRef,
 }: {
   posts: SliderPost[];
   index: number;
   stepPx: number;
-  showAuthor: boolean;
   trackRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
@@ -135,7 +124,7 @@ function SlidingRow({
         style={{ transform: `translate3d(-${index * stepPx}px, 0, 0)` }}
       >
         {posts.map((post) => (
-          <SliderCard key={post.id} post={post} showAuthor={showAuthor} />
+          <SliderCard key={post.id} post={post} />
         ))}
       </div>
     </div>
@@ -188,13 +177,11 @@ function ArrowRow({
 
 export function SectionPostSlider({
   posts,
-  dark = false,
   layout = "single",
 }: Props) {
   const [index, setIndex] = useState(0);
   const [stepPx, setStepPx] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
-  const showAuthor = !dark;
   const isMobile = useIsMobile();
   const isDouble = layout === "double" && !isMobile;
 
@@ -210,10 +197,14 @@ export function SectionPostSlider({
   const onNext = () => setIndex((i) => Math.min(maxIndex, i + 1));
 
   useEffect(() => {
+    // A changed collection or layout starts from its first visible card.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIndex(0);
   }, [posts, isMobile, layout]);
 
   useEffect(() => {
+    // Keep the current position valid when the number of visible cards changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIndex((i) => Math.min(i, maxIndex));
   }, [maxIndex]);
 
@@ -262,7 +253,6 @@ export function SectionPostSlider({
             posts={posts}
             index={index}
             stepPx={stepPx}
-            showAuthor={showAuthor}
             trackRef={trackRef}
           />
         </ArrowRow>
@@ -278,7 +268,6 @@ export function SectionPostSlider({
           posts={posts}
           index={index}
           stepPx={stepPx}
-          showAuthor={showAuthor}
           trackRef={trackRef}
         />
         {row2Posts.length > 0 ? (
@@ -293,7 +282,6 @@ export function SectionPostSlider({
               posts={row2Posts}
               index={index}
               stepPx={stepPx}
-              showAuthor={showAuthor}
             />
           </ArrowRow>
         ) : null}

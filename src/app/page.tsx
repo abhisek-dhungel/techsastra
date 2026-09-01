@@ -55,7 +55,6 @@ function toSliderPosts(posts: PostCardData[]): SliderPost[] {
     title: post.title,
     slug: post.slug,
     coverImage: post.coverImage,
-    authorName: post.author.name,
     categorySlug: post.category.slug,
     categoryName: post.category.name,
     secondaryCategory: post.secondaryCategory
@@ -92,7 +91,6 @@ function CategorySection({
       </div>
       <SectionPostSlider
         posts={toSliderPosts(posts)}
-        dark={dark}
         layout={layout}
       />
     </>
@@ -160,13 +158,13 @@ export default async function HomePage() {
           </aside>
 
           <div className="space-y-5">
-            {hero ? <PostCard post={hero} size="lg" /> : null}
+            {hero ? <PostCard post={hero} size="lg" showAuthor={false} /> : null}
             <div
               className="featured-grid grid gap-5"
               style={{ gridTemplateColumns: "1fr 1fr" }}
             >
               {heroRest.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} showAuthor={false} />
               ))}
             </div>
           </div>

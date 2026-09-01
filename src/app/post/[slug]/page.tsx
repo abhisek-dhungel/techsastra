@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight, CalendarDays, Clock3, Eye } from "lucide-react";
-import { ArticleExperience } from "@/components/ArticleExperience";
+import { ArticleShareButton } from "@/components/ArticleShareButton";
 import { JsonLd } from "@/components/JsonLd";
 import { PostContent } from "@/components/PostContent";
 import { formatPostDate } from "@/lib/dates";
@@ -197,6 +197,7 @@ export default async function PostPage({ params }: Props) {
               </strong>
             </div>
             <div className="article-meta-list">
+              <ArticleShareButton title={post.title} />
               <span>
                 <CalendarDays size={15} />
                 <time dateTime={published} itemProp="datePublished">
@@ -262,7 +263,6 @@ export default async function PostPage({ params }: Props) {
           </footer>
         </div>
 
-        <ArticleExperience title={post.title} />
       </div>
 
       {relatedPosts.length ? (

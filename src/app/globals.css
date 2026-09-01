@@ -2236,6 +2236,8 @@ body:has(.admin-shell) #main-content {
   --article-muted: #6f7269;
   --article-line: #e2e3dc;
   --article-accent: #dfff31;
+  --article-display-font: "Helvetica Neue", "Arial Nova", Arial, sans-serif;
+  --article-body-font: Arial, "Helvetica Neue", sans-serif;
   overflow: clip;
   margin-top: -5.1rem;
   padding-top: 5.1rem;
@@ -2331,13 +2333,13 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-hero h1 {
-  max-width: 16ch;
+  max-width: 19ch;
   margin: 0;
-  font-family: var(--font-outfit), var(--font-mulish), sans-serif;
-  font-size: clamp(2.5rem, 6.8vw, 5.65rem);
-  font-weight: 750;
-  line-height: 0.98;
-  letter-spacing: -0.062em;
+  font-family: var(--article-display-font);
+  font-size: clamp(2.25rem, 4.2vw, 3.65rem);
+  font-weight: 700;
+  line-height: 1.03;
+  letter-spacing: -0.048em;
   text-wrap: balance;
 }
 
@@ -2345,8 +2347,10 @@ body:has(.admin-shell) #main-content {
   max-width: 47rem;
   margin: 1.5rem 0 0;
   color: #585b53;
-  font-size: clamp(1.05rem, 2vw, 1.3rem);
-  line-height: 1.58;
+  font-family: var(--article-body-font);
+  font-size: clamp(0.98rem, 1.55vw, 1.12rem);
+  line-height: 1.55;
+  letter-spacing: -0.008em;
   text-wrap: pretty;
 }
 
@@ -2412,13 +2416,13 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-cover {
-  width: 100%;
-  max-height: 720px;
+  width: min(860px, 78%);
+  max-height: 520px;
   aspect-ratio: 16 / 8.8;
   object-fit: cover;
-  border-radius: 26px;
+  border-radius: 18px;
   background: #e8e9e2;
-  box-shadow: 0 34px 90px rgba(21, 22, 18, 0.14);
+  box-shadow: 0 24px 64px rgba(21, 22, 18, 0.12);
 }
 
 .article-cover-caption {
@@ -2431,6 +2435,7 @@ body:has(.admin-shell) #main-content {
   font-size: 0.59rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  width: min(860px, 78%);
 }
 
 .article-reading-grid {
@@ -2453,25 +2458,25 @@ body:has(.admin-shell) #main-content {
 
 .article-body .prose-ts {
   color: #30322d;
-  font-family: var(--font-open-sans), sans-serif;
-  font-size: calc(1.08rem * var(--reader-scale));
-  line-height: 1.86;
-  letter-spacing: -0.006em;
+  font-family: var(--article-body-font);
+  font-size: calc(0.98rem * var(--reader-scale));
+  line-height: 1.72;
+  letter-spacing: -0.004em;
   transition: font-size 160ms ease;
 }
 
 .article-body .prose-ts > p:first-child::first-letter {
-  float: left;
-  margin: 0.09em 0.12em 0 0;
-  color: #171813;
-  font-family: var(--font-outfit), sans-serif;
-  font-size: 3.75em;
-  font-weight: 750;
-  line-height: 0.76;
+  float: none;
+  margin: 0;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .article-body .prose-ts p {
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.25rem;
 }
 
 .article-body .prose-ts h1,
@@ -2480,21 +2485,22 @@ body:has(.admin-shell) #main-content {
 .article-body .prose-ts h4 {
   scroll-margin-top: 7.5rem;
   color: #171813;
-  letter-spacing: -0.04em;
+  font-family: var(--article-display-font);
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
 .article-body .prose-ts h2 {
-  margin: 3.6rem 0 1rem;
+  margin: 3.25rem 0 0.9rem;
   padding-top: 0.9rem;
   border-top: 1px solid var(--article-line);
-  font-size: clamp(1.7rem, 3.5vw, 2.25rem);
-  line-height: 1.12;
+  font-size: clamp(1.45rem, 2.8vw, 1.85rem);
+  line-height: 1.16;
 }
 
 .article-body .prose-ts h3 {
-  margin-top: 2.4rem;
-  font-size: clamp(1.3rem, 2.5vw, 1.6rem);
+  margin-top: 2.25rem;
+  font-size: clamp(1.2rem, 2.1vw, 1.42rem);
 }
 
 .article-body .prose-ts a {
@@ -2513,8 +2519,8 @@ body:has(.admin-shell) #main-content {
   border-radius: 0 16px 16px 0;
   color: #282a25;
   background: #f1f2e9;
-  font-family: var(--font-outfit), sans-serif;
-  font-size: 1.18em;
+  font-family: var(--article-display-font);
+  font-size: 1.08em;
   font-weight: 600;
   line-height: 1.55;
 }
@@ -2951,8 +2957,8 @@ body:has(.admin-shell) #main-content {
   }
 
   .article-hero h1 {
-    font-size: clamp(2.35rem, 12.5vw, 4rem);
-    line-height: 1;
+    font-size: clamp(2rem, 9vw, 2.7rem);
+    line-height: 1.04;
   }
 
   .article-meta-list {
@@ -2963,18 +2969,18 @@ body:has(.admin-shell) #main-content {
   }
 
   .article-cover-wrap {
-    width: 100%;
+    width: calc(100% - 2rem);
   }
 
   .article-cover {
+    width: 100%;
     aspect-ratio: 4 / 3;
-    border-radius: 0;
-    box-shadow: none;
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(21, 22, 18, 0.1);
   }
 
   .article-cover-caption {
-    width: calc(100% - 2rem);
-    margin-inline: auto;
+    width: 100%;
   }
 
   .article-reading-grid {
@@ -2982,8 +2988,8 @@ body:has(.admin-shell) #main-content {
   }
 
   .article-body .prose-ts {
-    font-size: calc(1rem * var(--reader-scale));
-    line-height: 1.8;
+    font-size: calc(0.95rem * var(--reader-scale));
+    line-height: 1.7;
   }
 
   .article-body .prose-ts h2 {

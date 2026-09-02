@@ -60,7 +60,11 @@ export function PostCard({
         <h3 className={`post-title m-0 ${titleClass}`}>
           <Link href={`/post/${post.slug}`}>{post.title}</Link>
         </h3>
-        {showAuthor ? <p className="author-meta">{post.author.name}</p> : null}
+        {showAuthor ? (
+          <p className="author-meta">
+            By <Link href={`/author/${post.author.slug}`}>{post.author.name}</Link>
+          </p>
+        ) : null}
       </div>
     </article>
   );

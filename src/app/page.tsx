@@ -14,26 +14,40 @@ import {
   DEFAULT_DESCRIPTION,
   SITE,
   absoluteUrl,
+  seoAlternates,
 } from "@/lib/seo";
 
 export const revalidate = 60;
 
+const HOME_TITLE = `${SITE.name}: Tech News, Reviews & Prices in Nepal`;
+
 export const metadata: Metadata = {
   title: {
-    absolute: `${SITE.name} — Best Tech Site of Nepal | News, Prices & Reviews`,
+    absolute: HOME_TITLE,
   },
   description: DEFAULT_DESCRIPTION,
-  alternates: { canonical: "/" },
+  alternates: seoAlternates("/"),
   openGraph: {
-    title: `${SITE.name} — Best Tech Portal of Nepal`,
+    title: HOME_TITLE,
     description: DEFAULT_DESCRIPTION,
     url: absoluteUrl("/"),
     type: "website",
+    siteName: SITE.name,
+    locale: SITE.locale,
+    images: [
+      {
+        url: SITE.defaultOgImage,
+        width: 1200,
+        height: 630,
+        alt: "TechSastra tech news, reviews and prices in Nepal",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} — Best Tech Site of Nepal`,
+    title: HOME_TITLE,
     description: DEFAULT_DESCRIPTION,
+    images: [SITE.defaultOgImage],
   },
 };
 
@@ -136,10 +150,45 @@ export default async function HomePage() {
     })),
   };
 
+  const homePageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": absoluteUrl("/#webpage"),
+    url: absoluteUrl("/"),
+    name: HOME_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    inLanguage: "en-NP",
+    isPartOf: { "@id": absoluteUrl("/#website") },
+    about: { "@id": absoluteUrl("/#organization") },
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      url: absoluteUrl(SITE.defaultOgImage),
+    },
+  };
+
   return (
     <>
       <HomeHashScroll />
-      <JsonLd data={itemListJsonLd} />
+      <JsonLd data={[homePageJsonLd, itemListJsonLd]} />
+
+      <section className="home-seo-intro container-ts" aria-labelledby="home-title">
+        <div className="home-seo-copy">
+          <span>Technology, explained for Nepal</span>
+          <h1 id="home-title">Tech news, reviews & prices in Nepal</h1>
+          <p>
+            Follow Nepal&apos;s latest technology launches, gadget reviews,
+            mobile and laptop price guides, EV news and startup stories—all
+            with useful local context.
+          </p>
+        </div>
+        <nav className="home-topic-links" aria-label="Popular Nepal tech guides">
+          <Link href="/category/mobile-phone-prices">Mobile price in Nepal</Link>
+          <Link href="/category/laptop-prices">Laptop price in Nepal</Link>
+          <Link href="/category/news">Latest tech news</Link>
+          <Link href="/category/reviews">Tech reviews</Link>
+          <Link href="/category/auto">EV & auto news</Link>
+        </nav>
+      </section>
 
       <section className="container-ts py-6 md:py-10">
         <div

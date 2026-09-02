@@ -6,15 +6,15 @@ import { JsonLd } from "@/components/JsonLd";
 import {
   DEFAULT_DESCRIPTION,
   SITE,
-  absoluteUrl,
   organizationJsonLd,
+  seoAlternates,
   websiteJsonLd,
 } from "@/lib/seo";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: `${SITE.name} — Best Tech Site of Nepal | News, Prices & Reviews`,
+    default: `${SITE.name}: Tech News, Reviews & Prices in Nepal`,
     template: `%s | ${SITE.name}`,
   },
   description: DEFAULT_DESCRIPTION,
@@ -31,35 +31,28 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  alternates: {
-    canonical: "/",
-    types: {
-      "application/rss+xml": absoluteUrl("/feed.xml"),
-    },
-  },
+  alternates: seoAlternates("/"),
   openGraph: {
     type: "website",
     locale: SITE.locale,
     url: SITE.url,
     siteName: SITE.name,
-    title: `${SITE.name} — Best Tech Portal of Nepal`,
+    title: `${SITE.name}: Tech News, Reviews & Prices in Nepal`,
     description: DEFAULT_DESCRIPTION,
     images: [
       {
         url: SITE.defaultOgImage,
         width: 1200,
         height: 630,
-        alt: `${SITE.name} — Nepal's tech news & prices`,
+        alt: `${SITE.name}: tech news, reviews and prices in Nepal`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} — Best Tech Site of Nepal`,
+    title: `${SITE.name}: Tech News, Reviews & Prices in Nepal`,
     description: DEFAULT_DESCRIPTION,
     images: [SITE.defaultOgImage],
-    creator: SITE.twitterHandle,
-    site: SITE.twitterHandle,
   },
   robots: {
     index: true,

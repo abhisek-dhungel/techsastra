@@ -72,7 +72,7 @@ export type PostCardRecord = Pick<
 > & {
   category: { name: string; slug: string };
   secondaryCategory: { name: string; slug: string } | null;
-  author: { name: string };
+  author: { name: string; slug: string };
 };
 
 const CATEGORY_COLUMNS = `
@@ -152,7 +152,8 @@ const POST_CARD_COLUMNS = `
   c."slug" AS c_slug,
   sc."name" AS sc_name,
   sc."slug" AS sc_slug,
-  a."name" AS a_name
+  a."name" AS a_name,
+  a."slug" AS a_slug
 `;
 
 const POST_CARD_JOINS = `
@@ -242,7 +243,10 @@ function mapPostCard(row: Row): PostCardRecord {
       secondaryName && secondarySlug
         ? { name: secondaryName, slug: secondarySlug }
         : null,
-    author: { name: rowString(row, "a_name") },
+    author: {
+      name: rowString(row, "a_name"),
+      slug: rowString(row, "a_slug"),
+    },
   };
 }
 
@@ -370,6 +374,34 @@ export async function findCategoryById(id: string) {
     args: [id],
   });
   return result.rows[0] ? mapCategory(result.rows[0]) : null;
+}
+
+export async function findAuthorBySlug(slug: string) {
+  const result = await getDatabase().execute({
+    sql: `
+      SELECT "id", "name", "slug", "bio", "avatar", "createdAt"
+      FROM "Author"
+      WHERE "slug" = ?
+      LIMIT 1
+    `,
+    args: [slug],
+  });
+  return result.rows[0] ? mapAuthor(result.rows[0], "") : null;
+}
+
+export async function listPostCardsByAuthorId(authorId: string, take: number) {
+  const result = await getDatabase().execute({
+    sql: `
+      SELECT ${POST_CARD_COLUMNS}
+      FROM "Post" p
+      ${POST_CARD_JOINS}
+      WHERE p."published" = 1 AND p."authorId" = ?
+      ORDER BY p."publishedAt" DESC
+      LIMIT ?
+    `,
+    args: [authorId, take],
+  });
+  return result.rows.map(mapPostCard);
 }
 
 export async function listChildCategories(parentId: string) {
@@ -592,7 +624,7 @@ export async function listPublishedPostSlugs() {
 
 export async function listSitemapPosts() {
   const result = await getDatabase().execute(`
-    SELECT "slug", "updatedAt", "publishedAt"
+    SELECT "slug", "updatedAt", "publishedAt", "coverImage"
     FROM "Post"
     WHERE "published" = 1
     ORDER BY "publishedAt" DESC
@@ -600,6 +632,39 @@ export async function listSitemapPosts() {
   return result.rows.map((row) => ({
     slug: rowString(row, "slug"),
     updatedAt: rowDate(row, "updatedAt"),
+    publishedAt: rowDate(row, "publishedAt"),
+    coverImage: rowNullableString(row, "coverImage"),
+  }));
+}
+
+export async function listSitemapAuthors() {
+  const result = await getDatabase().execute(`
+    SELECT a."slug" AS slug, MAX(p."updatedAt") AS lastModified
+    FROM "Author" a
+    JOIN "Post" p ON p."authorId" = a."id" AND p."published" = 1
+    GROUP BY a."id", a."slug"
+    ORDER BY a."name" ASC
+  `);
+  return result.rows.map((row) => ({
+    slug: rowString(row, "slug"),
+    lastModified: rowDate(row, "lastModified"),
+  }));
+}
+
+export async function listRecentNewsSitemapPosts(since: Date) {
+  const result = await getDatabase().execute({
+    sql: `
+      SELECT "slug", "title", "publishedAt"
+      FROM "Post"
+      WHERE "published" = 1 AND "publishedAt" >= ?
+      ORDER BY "publishedAt" DESC
+      LIMIT 1000
+    `,
+    args: [since.getTime()],
+  });
+  return result.rows.map((row) => ({
+    slug: rowString(row, "slug"),
+    title: rowString(row, "title"),
     publishedAt: rowDate(row, "publishedAt"),
   }));
 }

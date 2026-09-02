@@ -1,11 +1,13 @@
 import { unstable_cache } from "next/cache";
 import {
+  findAuthorBySlug,
   findCategoryBySlug,
   findPostBySlug,
   listChildCategories,
   listFeedPostRecords,
   listFlatCategories,
   listLatestPostCards,
+  listPostCardsByAuthorId,
   listPostCardsByCategoryIds,
   listRootCategoriesWithChildren,
   type PostCardRecord,
@@ -72,6 +74,24 @@ export const getPostsByCategorySlug = unstable_cache(
   postsByCategorySlug,
   ["posts-by-category"],
   { revalidate: 60, tags: ["posts"] },
+);
+
+async function authorPageData(slug: string, take: number) {
+  try {
+    const author = await findAuthorBySlug(slug);
+    if (!author) return { author: null, posts: [] as PostCardData[] };
+    const posts = await listPostCardsByAuthorId(author.id, take);
+    return { author, posts };
+  } catch (err) {
+    console.warn("[posts] getAuthorPageData skipped:", (err as Error).message);
+    return { author: null, posts: [] as PostCardData[] };
+  }
+}
+
+export const getAuthorPageData = unstable_cache(
+  authorPageData,
+  ["author-page"],
+  { revalidate: 120, tags: ["posts"] },
 );
 
 async function feedPosts(take: number) {

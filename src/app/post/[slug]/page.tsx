@@ -13,6 +13,7 @@ import {
   absoluteUrl,
   breadcrumbJsonLd,
   seoDescriptionFromContent,
+  seoAlternates,
   stripHtml,
 } from "@/lib/seo";
 
@@ -32,6 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = seoDescriptionFromContent(post.excerpt, post.content);
   const url = absoluteUrl(`/post/${post.slug}`);
   const image = post.coverImage ? absoluteUrl(post.coverImage) : null;
+  const socialImage = image ?? absoluteUrl(SITE.defaultOgImage);
+  const authorUrl = absoluteUrl(`/author/${post.author.slug}`);
   const keywords = [
     post.title,
     post.category.name,
@@ -45,10 +48,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description,
     keywords,
-    authors: [{ name: post.author.name }],
+    authors: [{ name: post.author.name, url: authorUrl }],
     creator: post.author.name,
     publisher: SITE.name,
-    alternates: { canonical: url },
+    alternates: seoAlternates(`/post/${post.slug}`),
     openGraph: {
       type: "article",
       title: post.title,
@@ -61,19 +64,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       authors: [post.author.name],
       section: post.category.name,
       tags: keywords,
-      images: image ? [{ url: image, alt: post.title }] : [],
+      images: [{ url: socialImage, alt: post.title }],
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: post.title,
       description,
-      images: image ? [image] : [],
+      images: [socialImage],
     },
     robots: {
       index: true,
       follow: true,
       "max-image-preview": "large",
       "max-snippet": -1,
+      "max-video-preview": -1,
     },
   };
 }
@@ -86,6 +90,8 @@ export default async function PostPage({ params }: Props) {
   const description = seoDescriptionFromContent(post.excerpt, post.content);
   const url = absoluteUrl(`/post/${post.slug}`);
   const image = post.coverImage ? absoluteUrl(post.coverImage) : null;
+  const socialImage = image ?? absoluteUrl(SITE.defaultOgImage);
+  const authorUrl = absoluteUrl(`/author/${post.author.slug}`);
   const published = (post.publishedAt ?? post.createdAt).toISOString();
   const wordCount = stripHtml(post.content).split(/\s+/).filter(Boolean).length;
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 225));
@@ -103,27 +109,25 @@ export default async function PostPage({ params }: Props) {
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
+    "@id": `${url}#article`,
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": url,
+      "@id": `${url}#webpage`,
     },
     headline: post.title,
     description,
-    image: image ? [image] : undefined,
+    image: [socialImage],
+    thumbnailUrl: socialImage,
     datePublished: published,
     dateModified: post.updatedAt.toISOString(),
     author: {
       "@type": "Person",
+      "@id": `${authorUrl}#person`,
       name: post.author.name,
+      url: authorUrl,
     },
-    publisher: {
-      "@type": "NewsMediaOrganization",
-      name: SITE.name,
-      logo: {
-        "@type": "ImageObject",
-        url: absoluteUrl(SITE.defaultOgImage),
-      },
-    },
+    publisher: { "@id": absoluteUrl("/#organization") },
+    isPartOf: { "@id": absoluteUrl("/#website") },
     articleSection: post.category.name,
     keywords: [
       post.category.name,
@@ -138,9 +142,26 @@ export default async function PostPage({ params }: Props) {
     wordCount,
   };
 
+  const webPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: post.title,
+    description,
+    inLanguage: "en-NP",
+    isPartOf: { "@id": absoluteUrl("/#website") },
+    breadcrumb: { "@id": `${url}#breadcrumb` },
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      url: socialImage,
+    },
+    mainEntity: { "@id": `${url}#article` },
+  };
+
   return (
     <article className="article-page" itemScope itemType="https://schema.org/NewsArticle">
-      <JsonLd data={[breadcrumbJsonLd(breadcrumbItems), articleJsonLd]} />
+      <JsonLd data={[breadcrumbJsonLd(breadcrumbItems), webPageJsonLd, articleJsonLd]} />
       <meta itemProp="dateModified" content={post.updatedAt.toISOString()} />
 
       <header className="article-hero">
@@ -192,7 +213,9 @@ export default async function PostPage({ params }: Props) {
             <div className="article-author-copy">
               <span>Written by</span>
               <strong itemProp="author" itemScope itemType="https://schema.org/Person">
-                <span itemProp="name">{post.author.name}</span>
+                <Link href={`/author/${post.author.slug}`} itemProp="url">
+                  <span itemProp="name">{post.author.name}</span>
+                </Link>
               </strong>
             </div>
             <div className="article-meta-list">

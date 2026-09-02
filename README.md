@@ -1,6 +1,6 @@
 # TechSastra
 
-Nepal-focused tech news site modeled on [techsastra.com](https://techsastra.com) — responsive UI plus a backend for publishing posts under categories and subcategories.
+Nepal-focused tech news site for [www.techsastra.com](https://www.techsastra.com) — responsive UI plus a backend for publishing posts under categories and subcategories.
 
 ## Categories
 

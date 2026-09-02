@@ -7,25 +7,28 @@ import {
   SITE,
   absoluteUrl,
   breadcrumbJsonLd,
+  seoAlternates,
 } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "About TechSastra — Nepal's Tech Portal",
+  title: { absolute: "About TechSastra — Nepal Technology Publication" },
   description:
-    "TechSastra is Nepal's modern tech portal for news, gadget prices, reviews, automobiles and startups — built for Nepali readers and buyers.",
-  alternates: { canonical: "/about" },
+    "Meet TechSastra, a Nepal technology publication covering tech news, gadget prices, product reviews, automobiles and startups for Nepali readers.",
+  alternates: seoAlternates("/about"),
   openGraph: {
-    title: "About TechSastra — Nepal's Tech Portal",
+    title: "About TechSastra — Nepal Technology Publication",
     description: DEFAULT_DESCRIPTION,
     url: absoluteUrl("/about"),
     type: "website",
+    siteName: SITE.name,
+    locale: SITE.locale,
+    images: [SITE.defaultOgImage],
   },
   keywords: [
     "about TechSastra",
-    "best tech site of Nepal",
-    "best tech portal of Nepal",
     "tech news Nepal",
-    "best for price of tech in Nepal",
+    "technology publication Nepal",
+    "tech reviews Nepal",
   ],
 };
 
@@ -86,9 +89,13 @@ export default function AboutPage() {
     {
       "@context": "https://schema.org",
       "@type": "AboutPage",
+      "@id": absoluteUrl("/about#webpage"),
       name: "About TechSastra",
       url: absoluteUrl("/about"),
       description: DEFAULT_DESCRIPTION,
+      inLanguage: "en-NP",
+      isPartOf: { "@id": absoluteUrl("/#website") },
+      breadcrumb: { "@id": absoluteUrl("/about#breadcrumb") },
       mainEntity: { "@id": absoluteUrl("/#organization") },
     },
   ];

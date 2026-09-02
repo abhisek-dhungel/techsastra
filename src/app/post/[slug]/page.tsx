@@ -170,7 +170,6 @@ export default async function PostPage({ params }: Props) {
                 {post.secondaryCategory.name}
               </Link>
             ) : null}
-            <span>TechSastra original</span>
           </div>
 
           <h1 itemProp="headline">{post.title}</h1>
@@ -223,11 +222,11 @@ export default async function PostPage({ params }: Props) {
             src={post.coverImage}
             alt={post.title}
             width={1600}
-            height={900}
+            height={1000}
             className="article-cover"
             sizes="(max-width: 760px) 100vw, (max-width: 1280px) 92vw, 1180px"
             quality={82}
-            priority
+            preload
             itemProp="image"
           />
           <div className="article-cover-caption">
@@ -242,25 +241,6 @@ export default async function PostPage({ params }: Props) {
           <div id="article-body" className="article-body" itemProp="articleBody">
             <PostContent content={post.content} />
           </div>
-
-          <footer className="article-author-card">
-            <div className="article-author-avatar is-large" aria-hidden>
-              {post.author.name
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((part) => part[0])
-                .join("")
-                .toUpperCase()}
-            </div>
-            <div>
-              <span>About the author</span>
-              <h2>{post.author.name}</h2>
-              <p>
-                {post.author.bio ||
-                  "Reporting the technology, products and ideas shaping how Nepal lives, works and moves."}
-              </p>
-            </div>
-          </footer>
         </div>
 
       </div>

@@ -41,6 +41,9 @@ export async function POST(request: Request) {
       published,
       slug: customSlug,
     } = body;
+    const customSlugValue =
+      typeof customSlug === "string" ? customSlug.trim() : "";
+    const hasCustomSlug = Boolean(customSlugValue);
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const content = typeof body.content === "string" ? body.content : "";
@@ -102,15 +105,28 @@ export async function POST(request: Request) {
     }
 
     const generatedSlug = slugify(
-      typeof customSlug === "string" && customSlug.trim() ? customSlug : title,
+      hasCustomSlug ? customSlugValue : title,
       { lower: true, strict: true, trim: true },
     );
+    if (hasCustomSlug && !generatedSlug) {
+      return NextResponse.json(
+        { error: "Post link must contain at least one letter or number." },
+        { status: 400 },
+      );
+    }
+    if (hasCustomSlug && generatedSlug.length > 470) {
+      return NextResponse.json(
+        { error: "Post link must be 470 characters or fewer." },
+        { status: 400 },
+      );
+    }
     const baseSlug = (generatedSlug || `post-${Date.now()}`).slice(0, 470);
     const authorSlug =
       slugify(authorLabel, { lower: true, strict: true, trim: true }) || "author";
 
     let post = null;
-    for (let attempt = 0; attempt < 10; attempt++) {
+    const maxAttempts = hasCustomSlug ? 1 : 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt}`;
       try {
         post = await insertPost({
@@ -131,6 +147,15 @@ export async function POST(request: Request) {
         break;
       } catch (reason) {
         if (isUniqueDatabaseError(reason)) {
+          if (hasCustomSlug) {
+            return NextResponse.json(
+              {
+                error:
+                  "That post link is already in use. Choose a different ending.",
+              },
+              { status: 409 },
+            );
+          }
           continue;
         }
         throw reason;

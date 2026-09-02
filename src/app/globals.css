@@ -1753,6 +1753,77 @@ body:has(.admin-shell) #main-content {
   min-height: 44px;
 }
 
+.admin-url-field {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  min-height: 44px;
+  border: 1px solid #d8d9d1;
+  border-radius: 11px;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-url-field:focus-within {
+  border-color: #a8bd27;
+  box-shadow: 0 0 0 3px rgba(223, 255, 49, 0.2);
+}
+
+.admin-url-field > span {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.78rem 0 0.78rem 0.9rem;
+  color: #777b70 !important;
+  background: #f3f4ee;
+  border-right: 1px solid #d8d9d1;
+  font-family: var(--font-open-sans), sans-serif !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.admin-url-field input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  padding: 0.78rem 0.9rem;
+  color: #252720;
+  background: #fff;
+  font-family: var(--font-open-sans), sans-serif;
+  font-size: 0.83rem;
+}
+
+.admin-url-field input:focus {
+  outline: 0;
+}
+
+.admin-url-field.is-readonly,
+.admin-url-field.is-readonly input {
+  background: #f3f4ee;
+}
+
+.admin-url-field.is-readonly input {
+  color: #73776d;
+  cursor: not-allowed;
+}
+
+.admin-url-help {
+  display: block;
+  margin-top: 0.45rem;
+  color: #777b70;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-url-help strong {
+  color: #596800;
+  font-weight: 650;
+}
+
 .admin-editor-card textarea.admin-input {
   line-height: 1.6;
   resize: vertical;
@@ -2381,8 +2452,7 @@ body:has(.admin-shell) #main-content {
   margin-bottom: 1.15rem;
 }
 
-.article-category-row a,
-.article-category-row span {
+.article-category-row a {
   display: inline-flex;
   align-items: center;
   min-height: 27px;
@@ -2396,12 +2466,6 @@ body:has(.admin-shell) #main-content {
   font-weight: 750;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.article-category-row span {
-  color: #7c8076;
-  border-color: var(--article-line);
-  background: rgba(255, 255, 255, 0.6);
 }
 
 .article-hero h1 {
@@ -2524,7 +2588,7 @@ body:has(.admin-shell) #main-content {
 
 .article-cover {
   max-height: 520px;
-  aspect-ratio: 16 / 8.8;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   border-radius: 18px;
   background: #e8e9e2;
@@ -2660,45 +2724,6 @@ body:has(.admin-shell) #main-content {
   background: #eff1e5;
 }
 
-.article-author-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1rem;
-  margin-top: 4rem;
-  padding: 1.4rem;
-  border: 1px solid var(--article-line);
-  border-radius: 18px;
-  background: #f5f6ef;
-}
-
-.article-author-avatar.is-large {
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
-  font-size: 0.88rem;
-}
-
-.article-author-card span {
-  color: #858980;
-  font-size: 0.59rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.article-author-card h2 {
-  margin: 0.12rem 0 0.3rem;
-  font-family: var(--font-outfit), sans-serif;
-  font-size: 1rem;
-}
-
-.article-author-card p {
-  margin: 0;
-  color: #6b6f65;
-  font-size: 0.75rem;
-  line-height: 1.55;
-}
-
 .article-related {
   padding: clamp(3rem, 6vw, 5rem) 0;
   color: #fff;
@@ -2818,6 +2843,16 @@ body:has(.admin-shell) #main-content {
 }
 
 @media (max-width: 720px) {
+  .admin-url-field {
+    flex-direction: column;
+  }
+
+  .admin-url-field > span {
+    padding: 0.62rem 0.8rem;
+    border-right: 0;
+    border-bottom: 1px solid #d8d9d1;
+  }
+
   .article-hero {
     padding-top: 2.5rem;
   }
@@ -2844,7 +2879,7 @@ body:has(.admin-shell) #main-content {
 
   .article-cover {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 10;
     border-radius: 14px;
     box-shadow: 0 16px 40px rgba(21, 22, 18, 0.1);
   }
@@ -2889,22 +2924,6 @@ body:has(.admin-shell) #main-content {
     min-height: 116px;
     aspect-ratio: auto;
   }
-}
-
-@media (max-width: 460px) {
-  .article-category-row span {
-    display: none;
-  }
-
-  .article-author-card {
-    grid-template-columns: 1fr;
-  }
-
-  .article-author-avatar.is-large {
-    width: 46px;
-    height: 46px;
-  }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

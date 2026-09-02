@@ -73,6 +73,28 @@ type WorkspaceView = "dashboard" | "editor";
 type PostFilter = "all" | "published" | "drafts" | "featured";
 type ContentView = "html" | "preview";
 
+const POST_LINK_PREFIX = "https://www.techsastra.com/post/";
+const MAX_POST_SLUG_LENGTH = 470;
+
+function normalizePostSlug(value: string, trimTrailing = false) {
+  const withoutPrefix = value
+    .replace(/^https?:\/\/(?:www\.)?techsastra\.com\/post\//i, "")
+    .split(/[?#]/, 1)[0];
+  const normalized = withoutPrefix
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+/, "");
+
+  return (trimTrailing ? normalized.replace(/-+$/, "") : normalized).slice(
+    0,
+    MAX_POST_SLUG_LENGTH,
+  );
+}
+
 class ApiError extends Error {
   constructor(
     message: string,
@@ -181,6 +203,7 @@ export default function AdminPage() {
 
   const [form, setForm] = useState({
     title: "",
+    slug: "",
     excerpt: "",
     content: "",
     coverImage: "",
@@ -300,6 +323,7 @@ export default function AdminPage() {
     const firstParent = categories.find((c) => !c.parentId);
     setForm({
       title: "",
+      slug: "",
       excerpt: "",
       content: "",
       coverImage: "",
@@ -329,6 +353,7 @@ export default function AdminPage() {
     setError(null);
     setForm({
       title: post.title,
+      slug: post.slug,
       excerpt: post.excerpt || "",
       content: post.content,
       coverImage: post.coverImage || "",
@@ -433,6 +458,11 @@ export default function AdminPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const normalizedSlug = normalizePostSlug(form.slug, true);
+    if (!editingId && !normalizedSlug) {
+      setError("Please add the post link ending.");
+      return;
+    }
     if (!selectedCategoryId) {
       setError("Please select a primary category.");
       return;
@@ -457,6 +487,7 @@ export default function AdminPage() {
     try {
       const payload = {
         title: form.title,
+        ...(!editingId ? { slug: normalizedSlug } : {}),
         excerpt: form.excerpt,
         content: form.content,
         coverImage: form.coverImage,
@@ -689,6 +720,50 @@ export default function AdminPage() {
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="MacBook Air M5 Launched in Nepal..."
             />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-[#555]">
+              Post link
+            </span>
+            <div className={`admin-url-field ${editingId ? "is-readonly" : ""}`}>
+              <span aria-hidden>{POST_LINK_PREFIX}</span>
+              <input
+                required
+                readOnly={Boolean(editingId)}
+                value={form.slug}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    slug: normalizePostSlug(e.target.value),
+                  })
+                }
+                onBlur={() =>
+                  setForm((current) => ({
+                    ...current,
+                    slug: normalizePostSlug(current.slug, true),
+                  }))
+                }
+                maxLength={MAX_POST_SLUG_LENGTH}
+                placeholder="macbook-air-m5-launched-in-nepal"
+                aria-label="Post link ending"
+                aria-describedby="post-link-help"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+            <small id="post-link-help" className="admin-url-help">
+              {editingId
+                ? "The link stays unchanged while editing this story."
+                : "This post will open at "}
+              {!editingId ? (
+                <strong>
+                  {POST_LINK_PREFIX}
+                  {normalizePostSlug(form.slug, true) || "your-post-link"}
+                </strong>
+              ) : null}
+            </small>
           </label>
 
           <div className="rounded-2xl border border-black/10 bg-white/60 p-4">

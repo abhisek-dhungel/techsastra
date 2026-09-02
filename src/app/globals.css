@@ -3095,22 +3095,14 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-body .prose-ts figure {
-  max-width: 100%;
   margin: 2.5rem 0;
 }
 
 .article-body .prose-ts img {
-  width: auto;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
   margin: 0;
   border-radius: 18px;
   box-shadow: 0 18px 50px rgba(21, 22, 18, 0.11);
-}
-
-.article-body .prose-ts figure > :where(img, picture),
-.article-body .prose-ts picture > img {
-  width: 100%;
 }
 
 .article-body .prose-ts figcaption {

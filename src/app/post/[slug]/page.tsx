@@ -213,9 +213,7 @@ export default async function PostPage({ params }: Props) {
             <div className="article-author-copy">
               <span>Written by</span>
               <strong itemProp="author" itemScope itemType="https://schema.org/Person">
-                <Link href={`/author/${post.author.slug}`} itemProp="url">
-                  <span itemProp="name">{post.author.name}</span>
-                </Link>
+                <span itemProp="name">{post.author.name}</span>
               </strong>
             </div>
             <div className="article-meta-list">

@@ -88,8 +88,6 @@ export function Footer() {
               </Link>
             ))}
             <Link href="/about">About</Link>
-            <Link href="/editorial-policy">Editorial Policy</Link>
-            <a href={`mailto:${SITE.email}`}>Contact</a>
           </nav>
 
           <div className="site-footer-meta">

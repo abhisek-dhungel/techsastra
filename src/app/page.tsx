@@ -170,25 +170,9 @@ export default async function HomePage() {
     <>
       <HomeHashScroll />
       <JsonLd data={[homePageJsonLd, itemListJsonLd]} />
-
-      <section className="home-seo-intro container-ts" aria-labelledby="home-title">
-        <div className="home-seo-copy">
-          <span>Technology, explained for Nepal</span>
-          <h1 id="home-title">Tech news, reviews & prices in Nepal</h1>
-          <p>
-            Follow Nepal&apos;s latest technology launches, gadget reviews,
-            mobile and laptop price guides, EV news and startup stories—all
-            with useful local context.
-          </p>
-        </div>
-        <nav className="home-topic-links" aria-label="Popular Nepal tech guides">
-          <Link href="/category/mobile-phone-prices">Mobile price in Nepal</Link>
-          <Link href="/category/laptop-prices">Laptop price in Nepal</Link>
-          <Link href="/category/news">Latest tech news</Link>
-          <Link href="/category/reviews">Tech reviews</Link>
-          <Link href="/category/auto">EV & auto news</Link>
-        </nav>
-      </section>
+      <h1 id="home-title" className="sr-only">
+        Tech news, reviews & prices in Nepal
+      </h1>
 
       <section className="container-ts py-6 md:py-10">
         <div

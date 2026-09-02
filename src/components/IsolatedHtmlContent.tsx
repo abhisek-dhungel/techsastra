@@ -8,6 +8,16 @@ type Props = {
   className?: string;
 };
 
+const CONTENT_BOUNDARY_STYLES = `
+html body img {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+html body picture,
+html body figure { max-width: 100%; }
+`;
+
 const FRAGMENT_STYLES = `
 :root {
   color-scheme: light;
@@ -40,7 +50,6 @@ ul, ol { margin: 0 0 1.4em; padding-left: 1.35em; }
 li { margin: 0.4em 0; }
 a { color: #526400; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
 img, video, iframe, table { max-width: 100%; }
-img { height: auto; }
 figure { margin: 1.8em 0; }
 figcaption { margin-top: 0.65em; color: #6a6a6a; font-size: 0.78em; line-height: 1.45; }
 blockquote {
@@ -60,14 +69,29 @@ pre {
 }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 hr { margin: 2em 0; border: 0; border-top: 1px solid #deded8; }
+${CONTENT_BOUNDARY_STYLES}
 `;
 
 function isCompleteDocument(html: string) {
   return /^\s*(?:<!doctype\s+html[^>]*>\s*)?<html(?:\s|>)/i.test(html);
 }
 
+function addContentBoundaryStyles(html: string) {
+  const style = `<style data-content-boundaries>${CONTENT_BOUNDARY_STYLES}</style>`;
+
+  if (/<\/head\s*>/i.test(html)) {
+    return html.replace(/<\/head\s*>/i, (closingHead) => `${style}\n${closingHead}`);
+  }
+
+  if (/<body(?:\s|>)/i.test(html)) {
+    return html.replace(/<body(?:\s[^>]*)?>/i, (openingBody) => `${style}\n${openingBody}`);
+  }
+
+  return html.replace(/<html(?:\s[^>]*)?>/i, (openingHtml) => `${openingHtml}\n${style}`);
+}
+
 function createSourceDocument(html: string) {
-  if (isCompleteDocument(html)) return html;
+  if (isCompleteDocument(html)) return addContentBoundaryStyles(html);
 
   return `<!doctype html>
 <html lang="en">
@@ -105,6 +129,12 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
     const resize = () => {
       const document = frame.contentDocument;
       if (!document?.documentElement || !document.body) return;
+
+      document.querySelectorAll("img").forEach((image) => {
+        image.style.setProperty("min-width", "0", "important");
+        image.style.setProperty("max-width", "100%", "important");
+        image.style.setProperty("height", "auto", "important");
+      });
 
       const height = Math.max(
         document.documentElement.scrollHeight,

@@ -1146,13 +1146,44 @@ img {
     max-width: 100%;
   }
 
-  .section-slider-arrow {
-    width: 2.1rem;
-    height: 2.1rem;
+  .section-slider.is-mobile .section-slider-row2.has-arrows {
+    position: relative;
+    display: block;
   }
 
-  .section-slider-row2 {
-    gap: 0.35rem;
+  .section-slider.is-mobile .section-slider-row2.has-arrows .section-slider-viewport {
+    width: calc(100% - 2.75rem);
+    margin-inline: auto;
+  }
+
+  .section-slider.is-mobile .section-slider-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border-color: rgba(17, 17, 17, 0.1);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.08);
+    transform: translateY(-50%);
+  }
+
+  .section-slider.is-mobile .section-slider-arrow:first-child {
+    left: -0.55rem;
+  }
+
+  .section-slider.is-mobile .section-slider-arrow:last-child {
+    right: -0.55rem;
+  }
+
+  .section-slider.is-mobile .section-slider-arrow svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+
+  .section-slider.is-mobile .section-slider-card .post-title {
+    font-size: 1.2rem;
+    line-height: 1.22;
   }
 }
 

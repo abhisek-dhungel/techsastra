@@ -3044,7 +3044,7 @@ body:has(.admin-shell) #main-content {
 }
 
 .article-reading-grid {
-  width: min(1180px, calc(100% - 2rem));
+  width: min(1280px, calc(100% - 2rem));
   margin: clamp(3rem, 7vw, 6rem) auto clamp(4rem, 8vw, 7rem);
 }
 

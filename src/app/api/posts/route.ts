@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidatePublishing } from "@/lib/revalidate-publishing";
 import slugify from "slugify";
 import { requireApiSession } from "@/lib/auth";
 import {
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
       );
     }
 
-    revalidateTag("posts", "max");
+    revalidatePublishing();
     return NextResponse.json(post, { status: 201 });
   } catch (reason) {
     if (reason instanceof SyntaxError) {

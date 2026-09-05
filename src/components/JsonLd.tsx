@@ -18,7 +18,7 @@ export function JsonLd({
     return (
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(items[0]) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(items[0]).replace(/</g, "\\u003c") }}
       />
     );
   }
@@ -29,7 +29,7 @@ export function JsonLd({
         <script
           key={index}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(item).replace(/</g, "\\u003c") }}
         />
       ))}
     </>

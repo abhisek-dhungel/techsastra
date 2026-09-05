@@ -14,7 +14,16 @@ function escapeXml(value: string) {
 
 export async function GET() {
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-  const posts = await listRecentNewsSitemapPosts(twoDaysAgo).catch(() => []);
+  let posts: Awaited<ReturnType<typeof listRecentNewsSitemapPosts>>;
+  try {
+    posts = await listRecentNewsSitemapPosts(twoDaysAgo);
+  } catch {
+    // Do not tell crawlers that all articles disappeared during a database outage.
+    return new Response("News sitemap temporarily unavailable", {
+      status: 503,
+      headers: { "Retry-After": "300", "Cache-Control": "no-store" },
+    });
+  }
   const urls = posts
     .map(
       (post) => `

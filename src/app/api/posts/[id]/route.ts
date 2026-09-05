@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidatePublishing } from "@/lib/revalidate-publishing";
 import slugify from "slugify";
 import { requireApiSession } from "@/lib/auth";
 import { logDatabaseError } from "@/lib/database-errors";
@@ -21,7 +21,7 @@ export async function DELETE(_request: Request, { params }: Params) {
     if (!deleted) {
       return NextResponse.json({ error: "Post not found." }, { status: 404 });
     }
-    revalidateTag("posts", "max");
+    revalidatePublishing();
     return NextResponse.json({ ok: true });
   } catch (reason) {
     const details = logDatabaseError("delete post", reason);
@@ -114,7 +114,7 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!post) {
       return NextResponse.json({ error: "Post not found." }, { status: 404 });
     }
-    revalidateTag("posts", "max");
+    revalidatePublishing();
     return NextResponse.json(post);
   } catch (reason) {
     if (reason instanceof SyntaxError) {

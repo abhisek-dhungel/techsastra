@@ -671,11 +671,19 @@ export async function listRecentNewsSitemapPosts(since: Date) {
 
 export async function listSitemapCategories() {
   const result = await getDatabase().execute(
-    `SELECT "slug", "createdAt" FROM "Category" ORDER BY "order" ASC`,
+    `SELECT c."slug", MAX(p."updatedAt") AS lastModified
+     FROM "Category" c
+     JOIN "Post" p ON p."published" = 1 AND (
+       p."categoryId" = c."id" OR p."secondaryCategoryId" = c."id"
+       OR p."categoryId" IN (SELECT "id" FROM "Category" WHERE "parentId" = c."id")
+       OR p."secondaryCategoryId" IN (SELECT "id" FROM "Category" WHERE "parentId" = c."id")
+     )
+     GROUP BY c."id", c."slug"
+     ORDER BY c."order" ASC`,
   );
   return result.rows.map((row) => ({
     slug: rowString(row, "slug"),
-    createdAt: rowDate(row, "createdAt"),
+    lastModified: rowDate(row, "lastModified"),
   }));
 }
 

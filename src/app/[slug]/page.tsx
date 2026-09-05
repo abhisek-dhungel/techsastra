@@ -78,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: SITE.locale,
       publishedTime: (post.publishedAt ?? post.createdAt).toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-      authors: [post.author.name],
+      authors: [authorUrl],
       section: post.category.name,
       tags: keywords,
       images: [{ url: socialImage, alt: post.title }],
@@ -107,7 +107,6 @@ export default async function PostPage({ params }: Props) {
   const description = seoDescriptionFromContent(post.excerpt, post.content);
   const url = absoluteUrl(`/${post.slug}`);
   const image = post.coverImage ? absoluteUrl(post.coverImage) : null;
-  const socialImage = image ?? absoluteUrl(SITE.defaultOgImage);
   const authorUrl = absoluteUrl(`/author/${post.author.slug}`);
   const published = (post.publishedAt ?? post.createdAt).toISOString();
   const wordCount = stripHtml(post.content).split(/\s+/).filter(Boolean).length;
@@ -131,10 +130,11 @@ export default async function PostPage({ params }: Props) {
       "@type": "WebPage",
       "@id": `${url}#webpage`,
     },
+    url,
     headline: post.title,
     description,
-    image: [socialImage],
-    thumbnailUrl: socialImage,
+    image: image ? [image] : undefined,
+    thumbnailUrl: image ?? undefined,
     datePublished: published,
     dateModified: post.updatedAt.toISOString(),
     author: {
@@ -169,10 +169,10 @@ export default async function PostPage({ params }: Props) {
     inLanguage: "en-NP",
     isPartOf: { "@id": absoluteUrl("/#website") },
     breadcrumb: { "@id": `${url}#breadcrumb` },
-    primaryImageOfPage: {
+    primaryImageOfPage: image ? {
       "@type": "ImageObject",
-      url: socialImage,
-    },
+      url: image,
+    } : undefined,
     mainEntity: { "@id": `${url}#article` },
   };
 

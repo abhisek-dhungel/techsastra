@@ -78,7 +78,7 @@ export function seoDescriptionFromContent(
   content: string,
   max = 155,
 ) {
-  if (excerpt?.trim()) return truncate(excerpt, max);
+  if (excerpt?.trim()) return truncate(stripHtml(excerpt), max);
   return truncate(stripHtml(content), max);
 }
 

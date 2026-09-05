@@ -8,6 +8,7 @@ import {
 } from "@/lib/database-errors";
 import {
   countExistingCategories,
+  findCategoryBySlug,
   createPost as insertPost,
   listAllPosts,
 } from "@/lib/database";
@@ -121,6 +122,17 @@ export async function POST(request: Request) {
       );
     }
     const baseSlug = (generatedSlug || `post-${Date.now()}`).slice(0, 470);
+    // Root post URLs must not shadow application pages or legacy category URLs.
+    const reservedSlugs = new Set([
+      "about", "editorial-policy", "admin", "api", "author", "category", "post",
+      "icons", "pulsar-n125-launched-in-nepal",
+    ]);
+    if (reservedSlugs.has(baseSlug) || await findCategoryBySlug(baseSlug)) {
+      return NextResponse.json(
+        { error: "That post link is reserved for a site page. Choose a different ending." },
+        { status: 409 },
+      );
+    }
     const authorSlug =
       slugify(authorLabel, { lower: true, strict: true, trim: true }) || "author";
 

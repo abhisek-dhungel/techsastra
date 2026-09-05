@@ -19,7 +19,7 @@ export async function GET() {
     .map(
       (post) => `
   <url>
-    <loc>${escapeXml(absoluteUrl(`/post/${post.slug}`))}</loc>
+    <loc>${escapeXml(absoluteUrl(`/${post.slug}`))}</loc>
     <news:news>
       <news:publication>
         <news:name>${escapeXml(SITE.name)}</news:name>

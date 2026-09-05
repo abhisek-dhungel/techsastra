@@ -224,7 +224,7 @@ export default async function CategoryPage({ params }: Props) {
       itemListElement: posts.map((post, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: absoluteUrl(`/post/${post.slug}`),
+        url: absoluteUrl(`/${post.slug}`),
         name: post.title,
       })),
     },

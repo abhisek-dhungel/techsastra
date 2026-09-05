@@ -23,7 +23,7 @@ export async function GET() {
 
   const items = posts
     .map((post) => {
-      const link = absoluteUrl(`/post/${post.slug}`);
+      const link = absoluteUrl(`/${post.slug}`);
       const description = seoDescriptionFromContent(
         post.excerpt,
         stripHtml(post.content),

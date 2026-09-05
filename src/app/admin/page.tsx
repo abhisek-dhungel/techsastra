@@ -73,12 +73,12 @@ type WorkspaceView = "dashboard" | "editor";
 type PostFilter = "all" | "published" | "drafts" | "featured";
 type ContentView = "html" | "preview";
 
-const POST_LINK_PREFIX = "https://www.techsastra.com/post/";
+const POST_LINK_PREFIX = "https://www.techsastra.com/";
 const MAX_POST_SLUG_LENGTH = 470;
 
 function normalizePostSlug(value: string, trimTrailing = false) {
   const withoutPrefix = value
-    .replace(/^https?:\/\/(?:www\.)?techsastra\.com\/post\//i, "")
+    .replace(/^https?:\/\/(?:www\.)?techsastra\.com\/(?:post\/)?/i, "")
     .split(/[?#]/, 1)[0];
   const normalized = withoutPrefix
     .normalize("NFKD")
@@ -1206,7 +1206,7 @@ export default function AdminPage() {
                       <PencilLine size={16} />
                     </button>
                     <Link
-                      href={`/post/${post.slug}`}
+                      href={`/${post.slug}`}
                       aria-label={`View ${post.title}`}
                     >
                       <ChevronRight size={17} />

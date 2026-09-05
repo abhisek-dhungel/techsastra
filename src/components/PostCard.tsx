@@ -25,7 +25,7 @@ export function PostCard({
   return (
     <article className="glass-card">
       {post.coverImage ? (
-        <Link href={`/post/${post.slug}`} className="block overflow-hidden">
+        <Link href={`/${post.slug}`} className="block overflow-hidden">
           <Image
             src={post.coverImage}
             alt={post.title}
@@ -58,7 +58,7 @@ export function PostCard({
           ) : null}
         </div>
         <h3 className={`post-title m-0 ${titleClass}`}>
-          <Link href={`/post/${post.slug}`}>{post.title}</Link>
+          <Link href={`/${post.slug}`}>{post.title}</Link>
         </h3>
         {showAuthor ? (
           <p className="author-meta">
@@ -74,7 +74,7 @@ export function NewsListItem({ post }: { post: PostCardData }) {
   return (
     <div className="news-list-item">
       <h3 className="post-title m-0 text-[1.05rem] md:text-[1.12rem]">
-        <Link href={`/post/${post.slug}`}>{post.title}</Link>
+        <Link href={`/${post.slug}`}>{post.title}</Link>
       </h3>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <Link href={`/category/${post.category.slug}`} className="cat-label">

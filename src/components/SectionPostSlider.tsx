@@ -56,7 +56,7 @@ function SliderCard({ post }: { post: SliderPost }) {
   return (
     <article className="glass-card section-slider-card">
       {post.coverImage ? (
-        <Link href={`/post/${post.slug}`} className="block overflow-hidden">
+        <Link href={`/${post.slug}`} className="block overflow-hidden">
           <Image
             src={post.coverImage}
             alt={post.title}
@@ -84,7 +84,7 @@ function SliderCard({ post }: { post: SliderPost }) {
           ) : null}
         </div>
         <h3 className="post-title m-0 text-[1.12rem]">
-          <Link href={`/post/${post.slug}`}>{post.title}</Link>
+          <Link href={`/${post.slug}`}>{post.title}</Link>
         </h3>
       </div>
     </article>

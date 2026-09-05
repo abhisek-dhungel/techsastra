@@ -145,7 +145,7 @@ export default async function HomePage() {
     itemListElement: latest.slice(0, 10).map((post, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      url: absoluteUrl(`/post/${post.slug}`),
+      url: absoluteUrl(`/${post.slug}`),
       name: post.title,
     })),
   };

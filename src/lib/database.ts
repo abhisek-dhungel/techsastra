@@ -584,6 +584,7 @@ export async function updatePost(id: string, input: UpdatePostInput) {
           "categoryId" = ?,
           "secondaryCategoryId" = ?,
           "featured" = ?,
+          "publishedAt" = CASE WHEN "published" = 0 AND ? = 1 THEN ? ELSE "publishedAt" END,
           "published" = ?,
           "authorId" = COALESCE(?, "authorId"),
           "updatedAt" = ?
@@ -597,6 +598,8 @@ export async function updatePost(id: string, input: UpdatePostInput) {
       input.categoryId,
       input.secondaryCategoryId,
       input.featured,
+      input.published,
+      nowTimestamp(),
       input.published,
       author?.id ?? null,
       nowTimestamp(),

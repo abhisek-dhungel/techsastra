@@ -187,6 +187,7 @@ export default function AdminPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingInline, setUploadingInline] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -458,6 +459,9 @@ export default function AdminPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (saving) return;
+    const submitter = (e.nativeEvent as SubmitEvent).submitter;
+    const published = !(submitter instanceof HTMLButtonElement && submitter.value === "draft");
     const normalizedSlug = normalizePostSlug(form.slug, true);
     if (!editingId && !normalizedSlug) {
       setError("Please add the post link ending.");
@@ -481,6 +485,7 @@ export default function AdminPage() {
     }
 
     setSaving(true);
+    setSavingDraft(!published);
     setMessage(null);
     setError(null);
     const wasEditing = Boolean(editingId);
@@ -493,7 +498,7 @@ export default function AdminPage() {
         coverImage: form.coverImage,
         authorName: form.authorName,
         featured: form.featured,
-        published: form.published,
+        published,
         categoryId: selectedCategoryId,
         secondaryCategoryId: selectedSecondaryId || null,
       };
@@ -506,9 +511,13 @@ export default function AdminPage() {
           body: JSON.stringify(payload),
         },
       );
-      setMessage(wasEditing ? `Updated: ${data.title}` : `Published: ${data.title}`);
+      setMessage(!data.published
+        ? `Saved to drafts: ${data.title}`
+        : wasEditing && form.published ? `Updated: ${data.title}` : `Published: ${data.title}`);
       resetForm();
       await load();
+      setQuery("");
+      setPostFilter(data.published ? "published" : "drafts");
       setWorkspaceView("dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -1080,28 +1089,28 @@ export default function AdminPage() {
               />
               Featured
             </label>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.published}
-                onChange={(e) =>
-                  setForm({ ...form, published: e.target.checked })
-                }
-              />
-              Published
-            </label>
           </div>
 
           <div className="admin-editor-actions">
-            <button type="submit" className="admin-publish-button" disabled={saving}>
+            <button type="submit" name="action" value="publish" className="admin-publish-button" disabled={saving || uploadingCover || uploadingInline}>
               <Send size={17} />
-              {saving
-                ? editingId
+              {saving && !savingDraft
+                ? editingId && form.published
                   ? "Saving…"
                   : "Publishing…"
-                : editingId
+                : editingId && form.published
                   ? "Save changes"
                   : "Publish post"}
+            </button>
+            <button
+              type="submit"
+              name="action"
+              value="draft"
+              className="admin-tool-button"
+              disabled={saving || uploadingCover || uploadingInline}
+            >
+              <FileText size={17} />
+              {saving && savingDraft ? "Saving draft…" : !editingId ? "Add to draft" : form.published ? "Move to draft" : "Save draft"}
             </button>
             {editingId ? (
               <button
@@ -1205,12 +1214,12 @@ export default function AdminPage() {
                     >
                       <PencilLine size={16} />
                     </button>
-                    <Link
+                    {post.published ? <Link
                       href={`/${post.slug}`}
                       aria-label={`View ${post.title}`}
                     >
                       <ChevronRight size={17} />
-                    </Link>
+                    </Link> : null}
                     <button
                       type="button"
                       className="is-danger"

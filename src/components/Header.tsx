@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type MouseEvent } from "react";
 import { HOME_SECTION_SLUGS, NAV_CATEGORIES, navHref } from "@/lib/categories";
 import { scrollToSectionId } from "@/lib/scroll";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function FacebookIcon() {
   return (
@@ -164,6 +165,7 @@ export function Header() {
               >
                 MENU
               </button>
+              <ThemeToggle />
             </div>
           </div>
 

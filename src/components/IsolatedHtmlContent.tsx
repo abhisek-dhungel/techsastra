@@ -69,6 +69,11 @@ pre {
 }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 hr { margin: 2em 0; border: 0; border-top: 1px solid #deded8; }
+:root[data-theme="dark"] { color-scheme: dark; color: #d5d9ce; }
+:root[data-theme="dark"] body { color: #d5d9ce; }
+:root[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6) { color: #f0f1eb; }
+:root[data-theme="dark"] a { color: #e2ff33; }
+:root[data-theme="dark"] figcaption { color: #adb2a5; }
 ${CONTENT_BOUNDARY_STYLES}
 `;
 
@@ -115,6 +120,16 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
 
     let observer: ResizeObserver | undefined;
     let scaleObserver: MutationObserver | undefined;
+    const syncTheme = () => {
+      if (completeDocument || !frame.contentDocument?.documentElement) return;
+      frame.contentDocument.documentElement.dataset.theme =
+        document.documentElement.dataset.theme || "light";
+    };
+    const themeObserver = new MutationObserver(syncTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
 
     const syncReaderScale = () => {
       if (completeDocument) return;
@@ -150,6 +165,7 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
       observer.observe(document.documentElement);
       observer.observe(document.body);
       syncReaderScale();
+      syncTheme();
     };
 
     const articleBody = frame.closest("#article-body");
@@ -168,13 +184,14 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
       frame.removeEventListener("load", resize);
       observer?.disconnect();
       scaleObserver?.disconnect();
+      themeObserver.disconnect();
     };
   }, [completeDocument, sourceDocument]);
 
   return (
     <iframe
       ref={frameRef}
-      className={`isolated-html-frame ${className}`.trim()}
+      className={`isolated-html-frame ${completeDocument ? "complete-html-document" : ""} ${className}`.trim()}
       title={title}
       sandbox="allow-same-origin"
       srcDoc={sourceDocument}

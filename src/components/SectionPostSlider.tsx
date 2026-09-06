@@ -2,11 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-
-const DESKTOP_COLS = 3;
-const DESKTOP_DOUBLE_VISIBLE = 6; // 3 × 2
-const MOBILE_MQ = "(max-width: 560px)";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type SliderPost = {
   id: string;
@@ -91,201 +87,85 @@ function SliderCard({ post }: { post: SliderPost }) {
   );
 }
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
+export function SectionPostSlider({ posts, layout = "single" }: Props) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewportId = useId();
+  const [edges, setEdges] = useState({ prev: false, next: false });
 
   useEffect(() => {
-    const mq = window.matchMedia(MOBILE_MQ);
-    const sync = () => setMobile(mq.matches);
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const sync = () => {
+      setEdges({
+        prev: viewport.scrollLeft > 1,
+        next: viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 1,
+      });
+    };
+    viewport.scrollLeft = 0;
     sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
-  return mobile;
-}
-
-function SlidingRow({
-  posts,
-  index,
-  stepPx,
-  trackRef,
-}: {
-  posts: SliderPost[];
-  index: number;
-  stepPx: number;
-  trackRef?: RefObject<HTMLDivElement | null>;
-}) {
-  return (
-    <div className="section-slider-viewport">
-      <div
-        ref={trackRef}
-        className="section-slider-track section-slider-track-one"
-        style={{ transform: `translate3d(-${index * stepPx}px, 0, 0)` }}
-      >
-        {posts.map((post) => (
-          <SliderCard key={post.id} post={post} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ArrowRow({
-  showArrows,
-  canPrev,
-  canNext,
-  onPrev,
-  onNext,
-  children,
-}: {
-  showArrows: boolean;
-  canPrev: boolean;
-  canNext: boolean;
-  onPrev: () => void;
-  onNext: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className={`section-slider-row2${showArrows ? " has-arrows" : ""}`}>
-      {showArrows ? (
-        <button
-          type="button"
-          className="section-slider-arrow"
-          aria-label="Previous post"
-          disabled={!canPrev}
-          onClick={onPrev}
-        >
-          <ChevronLeft />
-        </button>
-      ) : null}
-      {children}
-      {showArrows ? (
-        <button
-          type="button"
-          className="section-slider-arrow"
-          aria-label="Next post"
-          disabled={!canNext}
-          onClick={onNext}
-        >
-          <ChevronRight />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-export function SectionPostSlider({
-  posts,
-  layout = "single",
-}: Props) {
-  const [index, setIndex] = useState(0);
-  const [stepPx, setStepPx] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
-  const isDouble = layout === "double" && !isMobile;
-
-  const row2Posts = useMemo(() => posts.slice(DESKTOP_COLS), [posts]);
-
-  const visibleCount = isMobile ? 1 : isDouble ? DESKTOP_DOUBLE_VISIBLE : DESKTOP_COLS;
-  const maxIndex = Math.max(0, posts.length - visibleCount);
-  const showArrows = posts.length > visibleCount;
-  const canPrev = index > 0;
-  const canNext = index < maxIndex;
-
-  const onPrev = () => setIndex((i) => Math.max(0, i - 1));
-  const onNext = () => setIndex((i) => Math.min(maxIndex, i + 1));
-
-  useEffect(() => {
-    // A changed collection or layout starts from its first visible card.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIndex(0);
-  }, [posts, isMobile, layout]);
-
-  useEffect(() => {
-    // Keep the current position valid when the number of visible cards changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIndex((i) => Math.min(i, maxIndex));
-  }, [maxIndex]);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const measure = () => {
-      const first = track.querySelector(
-        ".section-slider-card",
-      ) as HTMLElement | null;
-      if (!first) return;
-      const styles = getComputedStyle(track);
-      const gap = parseFloat(styles.columnGap || styles.gap) || 16;
-      setStepPx(first.getBoundingClientRect().width + gap);
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(track);
-    window.addEventListener("resize", measure);
+    const observer = new ResizeObserver(sync);
+    observer.observe(viewport);
+    viewport.addEventListener("scroll", sync, { passive: true });
     return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
+      observer.disconnect();
+      viewport.removeEventListener("scroll", sync);
     };
-  }, [posts.length, isMobile, layout]);
+  }, [posts, layout]);
+
+  function move(direction: number) {
+    const viewport = viewportRef.current;
+    const card = viewport?.querySelector<HTMLElement>(".section-slider-card");
+    if (!viewport || !card) return;
+    const gap = parseFloat(getComputedStyle(viewport).columnGap) || 0;
+    viewport.scrollBy({
+      left: direction * (card.getBoundingClientRect().width + gap),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }
 
   if (posts.length === 0) {
-    return (
-      <p className="text-sm text-ts-muted">No posts in this section yet.</p>
-    );
+    return <p className="text-sm text-ts-muted">No posts in this section yet.</p>;
   }
 
-  /* Mobile or single-row sections: one scrolling row */
-  if (!isDouble) {
-    return (
-      <div className={`section-slider ${isMobile ? "is-mobile" : "is-single"}`}>
-        <ArrowRow
-          showArrows={showArrows}
-          canPrev={canPrev}
-          canNext={canNext}
-          onPrev={onPrev}
-          onNext={onNext}
-        >
-          <SlidingRow
-            posts={posts}
-            index={index}
-            stepPx={stepPx}
-            trackRef={trackRef}
-          />
-        </ArrowRow>
-      </div>
-    );
-  }
-
-  /* Desktop Gadgets/Auto: 2 rows × 3 tiles */
   return (
-    <div className="section-slider is-desktop is-double">
-      <div className="section-slider-desktop-rows">
-        <SlidingRow
-          posts={posts}
-          index={index}
-          stepPx={stepPx}
-          trackRef={trackRef}
-        />
-        {row2Posts.length > 0 ? (
-          <ArrowRow
-            showArrows={showArrows}
-            canPrev={canPrev}
-            canNext={canNext}
-            onPrev={onPrev}
-            onNext={onNext}
-          >
-            <SlidingRow
-              posts={row2Posts}
-              index={index}
-              stepPx={stepPx}
-            />
-          </ArrowRow>
-        ) : null}
+    <div className={`section-slider is-${layout}`}>
+      <button
+        type="button"
+        className="section-slider-arrow"
+        aria-label="Previous posts"
+        aria-controls={viewportId}
+        disabled={!edges.prev}
+        onClick={() => move(-1)}
+      >
+        <ChevronLeft />
+      </button>
+      <div
+        ref={viewportRef}
+        id={viewportId}
+        className="section-slider-viewport"
+        tabIndex={0}
+        role="region"
+        aria-label="Post cards"
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            move(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
+      >
+        {posts.map((post) => <SliderCard key={post.id} post={post} />)}
       </div>
+      <button
+        type="button"
+        className="section-slider-arrow"
+        aria-label="Next posts"
+        aria-controls={viewportId}
+        disabled={!edges.next}
+        onClick={() => move(1)}
+      >
+        <ChevronRight />
+      </button>
     </div>
   );
 }

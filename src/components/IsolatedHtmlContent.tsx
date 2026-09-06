@@ -39,8 +39,23 @@ function isNeutral(color: Color) {
   return Math.max(...color.channels) - Math.min(...color.channels) <= 30;
 }
 
+function isBlue(color: Color) {
+  const [red, green, blue] = color.channels;
+  const highest = Math.max(red, green, blue);
+  const range = highest - Math.min(red, green, blue);
+  if (range <= 30 || color.alpha === 0) return false;
+  const hue = highest === blue
+    ? 60 * ((red - green) / range + 4)
+    : highest === green ? 60 * ((blue - red) / range + 2) : 60 * ((green - blue) / range);
+  return hue >= 190 && hue <= 260;
+}
+
+function lime(color: Color) {
+  return `rgba(196, 232, 0, ${color.alpha})`;
+}
+
 // Compute changes from the authored light palette before changing any styles.
-// Accent surfaces (and their dark labels), photos, and colored text stay intact.
+// Blue accents become lime; other accents and photos retain their colors.
 function applyDarkPalette(content: Document) {
   const view = content.defaultView;
   if (!view) return () => {};
@@ -73,6 +88,21 @@ function applyDarkPalette(content: Document) {
       add(element, "background-color", surface);
       background = parseColor(surface);
     }
+    if (background && isBlue(background)) {
+      const replacement = lime(background);
+      add(element, "background-color", replacement);
+      background = parseColor(replacement);
+    }
+    if (image && !style.backgroundImage.includes("url(") && gradientColors?.some((color) => color && isBlue(color))) {
+      add(element, "background-image", style.backgroundImage.replace(/rgba?\([^)]+\)/g, (value) => {
+        const color = parseColor(value);
+        return color && isBlue(color) ? lime(color) : value;
+      }));
+      if (gradientColors.every((color) => color && isBlue(color))) {
+        background = parseColor(lime(gradientColors[0]!));
+        image = false;
+      }
+    }
     if (element === content.documentElement && (!background || background.alpha === 0)) {
       add(element, "background-color", surface);
       background = parseColor(surface);
@@ -85,6 +115,7 @@ function applyDarkPalette(content: Document) {
 
     const foreground = parseColor(style.color);
     let textColor = style.color;
+    if (foreground && isBlue(foreground)) textColor = lime(foreground);
     if (foreground && isNeutral(foreground) && !effective.image) {
       const light = luminance(foreground);
       const backdrop = luminance(effective.color);
@@ -96,9 +127,15 @@ function applyDarkPalette(content: Document) {
     for (const side of ["top", "right", "bottom", "left"]) {
       const property = `border-${side}-color`;
       const border = parseColor(style.getPropertyValue(property));
-      if (border && border.alpha > 0 && isNeutral(border) && luminance(border) > 0.3) {
+      if (border && isBlue(border)) {
+        add(element, property, lime(border));
+      } else if (border && border.alpha > 0 && isNeutral(border) && luminance(border) > 0.3) {
         add(element, property, "#3b4134");
       }
+    }
+    for (const property of ["text-decoration-color", "outline-color"]) {
+      const color = parseColor(style.getPropertyValue(property));
+      if (color && isBlue(color)) add(element, property, lime(color));
     }
   });
   add(content.documentElement, "color-scheme", "dark");

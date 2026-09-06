@@ -18,6 +18,36 @@ html body picture,
 html body figure { max-width: 100%; }
 `;
 
+// Published HTML can include its own styles and inline colors. Override only
+// its palette in dark mode so switching back restores the authored design.
+const DARK_CONTENT_STYLES = `
+html[data-theme="dark"] { color-scheme: dark; background: #121410 !important; }
+html[data-theme="dark"] body {
+  background: #121410 !important;
+  color: #d5d9ce !important;
+}
+html[data-theme="dark"] body :where(*):not(:where(img, picture, video, canvas, svg, svg *)) {
+  color: #d5d9ce !important;
+  background-color: transparent !important;
+  border-color: #3b4134 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] body :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: #f0f1eb !important;
+}
+html[data-theme="dark"] body :is(a, a *) { color: #e2ff33 !important; }
+html[data-theme="dark"] body :is(figcaption, caption, small) { color: #adb2a5 !important; }
+html[data-theme="dark"] body :is(th, pre, blockquote, button, input, select, textarea) {
+  background-color: #24281f !important;
+}
+html[data-theme="dark"] [data-reader-gradient] { background-image: none !important; }
+html[data-theme="dark"] body :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid #e2ff33;
+  outline-offset: 2px;
+}
+`;
+
 const FRAGMENT_STYLES = `
 :root {
   color-scheme: light;
@@ -69,11 +99,6 @@ pre {
 }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 hr { margin: 2em 0; border: 0; border-top: 1px solid #deded8; }
-:root[data-theme="dark"] { color-scheme: dark; color: #d5d9ce; }
-:root[data-theme="dark"] body { color: #d5d9ce; }
-:root[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6) { color: #f0f1eb; }
-:root[data-theme="dark"] a { color: #e2ff33; }
-:root[data-theme="dark"] figcaption { color: #adb2a5; }
 ${CONTENT_BOUNDARY_STYLES}
 `;
 
@@ -121,9 +146,22 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
     let observer: ResizeObserver | undefined;
     let scaleObserver: MutationObserver | undefined;
     const syncTheme = () => {
-      if (completeDocument || !frame.contentDocument?.documentElement) return;
-      frame.contentDocument.documentElement.dataset.theme =
-        document.documentElement.dataset.theme || "light";
+      const contentDocument = frame.contentDocument;
+      if (!contentDocument?.documentElement || !contentDocument.body) return;
+      if (!contentDocument.querySelector("style[data-reader-theme]")) {
+        // Remove decorative gradients in dark mode, but preserve photo backgrounds.
+        contentDocument.querySelectorAll<HTMLElement>("body, body *").forEach((element) => {
+          const background = contentDocument.defaultView?.getComputedStyle(element).backgroundImage || "";
+          if (background.includes("gradient(") && !background.includes("url(")) {
+            element.dataset.readerGradient = "";
+          }
+        });
+        const style = contentDocument.createElement("style");
+        style.dataset.readerTheme = "";
+        style.textContent = DARK_CONTENT_STYLES;
+        contentDocument.body.appendChild(style);
+      }
+      contentDocument.documentElement.dataset.theme = document.documentElement.dataset.theme || "light";
     };
     const themeObserver = new MutationObserver(syncTheme);
     themeObserver.observe(document.documentElement, {

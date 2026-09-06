@@ -3474,5 +3474,4 @@ body:has(.admin-shell) #main-content {
 }
 [data-theme="dark"] .prose-ts code { background: rgba(230, 237, 215, 0.08); }
 [data-theme="dark"] .prose-ts pre code { background: transparent; }
-/* Self-contained published HTML retains its own authored palette. */
-[data-theme="dark"] .article-html-frame.complete-html-document { background: #fff; }
+[data-theme="dark"] .article-html-frame { background: var(--ts-bg); }

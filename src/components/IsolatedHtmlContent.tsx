@@ -18,35 +18,100 @@ html body picture,
 html body figure { max-width: 100%; }
 `;
 
-// Published HTML can include its own styles and inline colors. Override only
-// its palette in dark mode so switching back restores the authored design.
-const DARK_CONTENT_STYLES = `
-html[data-theme="dark"] { color-scheme: dark; background: #121410 !important; }
-html[data-theme="dark"] body {
-  background: #121410 !important;
-  color: #d5d9ce !important;
+type Color = { channels: number[]; alpha: number };
+
+function parseColor(value: string): Color | null {
+  const match = value.match(/^rgba?\(([^)]+)\)$/);
+  if (!match) return null;
+  const values = match[1].split(/[,\s/]+/).map(Number);
+  return { channels: values.slice(0, 3), alpha: values[3] ?? 1 };
 }
-html[data-theme="dark"] body :where(*):not(:where(img, picture, video, canvas, svg, svg *)) {
-  color: #d5d9ce !important;
-  background-color: transparent !important;
-  border-color: #3b4134 !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
+
+function luminance(color: Color) {
+  const channels = color.channels.map((value) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
-html[data-theme="dark"] body :is(h1, h2, h3, h4, h5, h6, strong, b) {
-  color: #f0f1eb !important;
+
+function isNeutral(color: Color) {
+  return Math.max(...color.channels) - Math.min(...color.channels) <= 30;
 }
-html[data-theme="dark"] body :is(a, a *) { color: #e2ff33 !important; }
-html[data-theme="dark"] body :is(figcaption, caption, small) { color: #adb2a5 !important; }
-html[data-theme="dark"] body :is(th, pre, blockquote, button, input, select, textarea) {
-  background-color: #24281f !important;
+
+// Compute changes from the authored light palette before changing any styles.
+// Accent surfaces (and their dark labels), photos, and colored text stay intact.
+function applyDarkPalette(content: Document) {
+  const view = content.defaultView;
+  if (!view) return () => {};
+  const surface = "rgb(18, 20, 16)";
+  const backgrounds = new Map<Element, { color: Color; image: boolean }>();
+  const changes: { element: HTMLElement; property: string; value: string }[] = [];
+  const add = (element: HTMLElement, property: string, value: string) => {
+    changes.push({ element, property, value });
+  };
+
+  content.querySelectorAll<HTMLElement>("html, body, body *").forEach((element) => {
+    if (element.namespaceURI !== "http://www.w3.org/1999/xhtml" ||
+      element.matches("img, picture, video, canvas, script, style, link")) return;
+    const style = view.getComputedStyle(element);
+    const inherited = backgrounds.get(element.parentElement!) ?? {
+      color: parseColor(surface)!, image: false,
+    };
+    let background = parseColor(style.backgroundColor);
+    let image = style.backgroundImage !== "none";
+    const gradientColors = style.backgroundImage.match(/rgba?\([^)]+\)/g)?.map(parseColor);
+    const neutralGradient = image && !style.backgroundImage.includes("url(") &&
+      gradientColors?.length && gradientColors.every((color) => color && isNeutral(color)) &&
+      gradientColors.some((color) => color && luminance(color) > 0.15);
+    if (neutralGradient) {
+      add(element, "background-image", "none");
+      add(element, "background-color", surface);
+      background = parseColor(surface);
+      image = false;
+    } else if (background && background.alpha > 0 && isNeutral(background) && luminance(background) > 0.15) {
+      add(element, "background-color", surface);
+      background = parseColor(surface);
+    }
+    if (element === content.documentElement && (!background || background.alpha === 0)) {
+      add(element, "background-color", surface);
+      background = parseColor(surface);
+    }
+    const effective = background && background.alpha > 0
+      ? { color: { channels: background.channels.map((value, i) =>
+          value * background.alpha + inherited.color.channels[i] * (1 - background.alpha)), alpha: 1 }, image }
+      : { color: inherited.color, image: image || inherited.image };
+    backgrounds.set(element, effective);
+
+    const foreground = parseColor(style.color);
+    let textColor = style.color;
+    if (foreground && isNeutral(foreground) && !effective.image) {
+      const light = luminance(foreground);
+      const backdrop = luminance(effective.color);
+      const contrast = (Math.max(light, backdrop) + 0.05) / (Math.min(light, backdrop) + 0.05);
+      if (contrast < 4.5) textColor = backdrop < 0.3 ? "#d5d9ce" : "#202020";
+    }
+    // Pin authored colors so inherited changes cannot wash out an accent label.
+    add(element, "color", textColor);
+    for (const side of ["top", "right", "bottom", "left"]) {
+      const property = `border-${side}-color`;
+      const border = parseColor(style.getPropertyValue(property));
+      if (border && border.alpha > 0 && isNeutral(border) && luminance(border) > 0.3) {
+        add(element, property, "#3b4134");
+      }
+    }
+  });
+  add(content.documentElement, "color-scheme", "dark");
+  const originals = changes.map(({ element, property }) => ({
+    element, property, value: element.style.getPropertyValue(property),
+    priority: element.style.getPropertyPriority(property),
+  }));
+  changes.forEach(({ element, property, value }) => element.style.setProperty(property, value, "important"));
+  return () => originals.forEach(({ element, property, value, priority }) => {
+    if (value) element.style.setProperty(property, value, priority);
+    else element.style.removeProperty(property);
+  });
 }
-html[data-theme="dark"] [data-reader-gradient] { background-image: none !important; }
-html[data-theme="dark"] body :is(a, button, input, select, textarea):focus-visible {
-  outline: 2px solid #e2ff33;
-  outline-offset: 2px;
-}
-`;
 
 const FRAGMENT_STYLES = `
 :root {
@@ -145,23 +210,20 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
 
     let observer: ResizeObserver | undefined;
     let scaleObserver: MutationObserver | undefined;
+    let themedDocument: Document | null = null;
+    let appliedTheme: string | undefined;
+    let restorePalette: (() => void) | undefined;
     const syncTheme = () => {
       const contentDocument = frame.contentDocument;
       if (!contentDocument?.documentElement || !contentDocument.body) return;
-      if (!contentDocument.querySelector("style[data-reader-theme]")) {
-        // Remove decorative gradients in dark mode, but preserve photo backgrounds.
-        contentDocument.querySelectorAll<HTMLElement>("body, body *").forEach((element) => {
-          const background = contentDocument.defaultView?.getComputedStyle(element).backgroundImage || "";
-          if (background.includes("gradient(") && !background.includes("url(")) {
-            element.dataset.readerGradient = "";
-          }
-        });
-        const style = contentDocument.createElement("style");
-        style.dataset.readerTheme = "";
-        style.textContent = DARK_CONTENT_STYLES;
-        contentDocument.body.appendChild(style);
-      }
-      contentDocument.documentElement.dataset.theme = document.documentElement.dataset.theme || "light";
+      const theme = document.documentElement.dataset.theme || "light";
+      if (themedDocument === contentDocument && appliedTheme === theme) return;
+      restorePalette?.();
+      restorePalette = undefined;
+      if (theme === "dark") restorePalette = applyDarkPalette(contentDocument);
+      contentDocument.documentElement.dataset.theme = theme;
+      themedDocument = contentDocument;
+      appliedTheme = theme;
     };
     const themeObserver = new MutationObserver(syncTheme);
     themeObserver.observe(document.documentElement, {
@@ -223,6 +285,7 @@ export function IsolatedHtmlContent({ html, title, className = "" }: Props) {
       observer?.disconnect();
       scaleObserver?.disconnect();
       themeObserver.disconnect();
+      restorePalette?.();
     };
   }, [completeDocument, sourceDocument]);
 

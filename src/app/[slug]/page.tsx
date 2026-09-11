@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { findCategoryBySlug } from "@/lib/database";
-import { ArrowUpRight, CalendarDays, Clock3, Eye } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock3 } from "lucide-react";
 import { ArticleShareButton } from "@/components/ArticleShareButton";
 import { JsonLd } from "@/components/JsonLd";
 import { PostContent } from "@/components/PostContent";
@@ -244,10 +244,6 @@ export default async function PostPage({ params }: Props) {
               <span>
                 <Clock3 size={15} />
                 {readingMinutes} min read
-              </span>
-              <span>
-                <Eye size={15} />
-                {post.views.toLocaleString()} views
               </span>
             </div>
           </div>

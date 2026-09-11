@@ -175,10 +175,7 @@ export default async function HomePage() {
       </h1>
 
       <section className="container-ts py-6 md:py-10">
-        <div
-          className="home-grid grid gap-6"
-          style={{ gridTemplateColumns: "minmax(240px, 0.9fr) minmax(0, 1.7fr)" }}
-        >
+        <div className="home-grid grid">
           <aside id="news" className="glass home-section-anchor p-5 md:p-6">
             <h2 className="section-title">
               Tech <span>News</span>
@@ -192,10 +189,7 @@ export default async function HomePage() {
 
           <div className="space-y-5">
             {hero ? <PostCard post={hero} size="lg" showAuthor={false} /> : null}
-            <div
-              className="featured-grid grid gap-5"
-              style={{ gridTemplateColumns: "1fr 1fr" }}
-            >
+            <div className="featured-grid grid">
               {heroRest.map((post) => (
                 <PostCard key={post.id} post={post} showAuthor={false} />
               ))}

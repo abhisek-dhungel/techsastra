@@ -285,10 +285,7 @@ export default async function CategoryPage({ params }: Props) {
             the meantime.
           </p>
         ) : (
-          <div
-            className="latest-grid grid gap-5"
-            style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-          >
+          <div className="latest-grid grid">
             {posts.map((post) => (
               <PostCard key={post.id} post={post} darkCard />
             ))}
